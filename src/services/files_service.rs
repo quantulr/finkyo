@@ -5,6 +5,7 @@ use std::os::unix::fs::MetadataExt;
 #[cfg(target_os = "windows")]
 use std::os::windows::fs::{FileTypeExt, MetadataExt};
 use std::path::Path;
+use std::time::SystemTime;
 use tokio::fs::DirEntry;
 
 use crate::response::files::{EntryItem, EntryMetadata, EntryType};
@@ -46,6 +47,7 @@ pub async fn read_dir(base: &str, path: &str) -> Result<Vec<EntryItem>, (StatusC
                     name: entry.file_name().into_string().unwrap(),
                     entry_type: entry_meta.entry_type,
                     size: entry_meta.size,
+                    modified: entry_meta.modified,
                     width,
                     height,
                 };
@@ -111,7 +113,19 @@ pub async fn get_entry_metadata(entry: &DirEntry) -> Result<Option<EntryMetadata
             } else {
                 None
             };
-            let entry_metadata = EntryMetadata { entry_type, size };
+
+            let modified = match meta.modified() {
+                Ok(modified) => match modified.duration_since(SystemTime::UNIX_EPOCH) {
+                    Ok(time) => Some(time.as_millis()),
+                    Err(_) => None,
+                },
+                Err(_) => None,
+            };
+            let entry_metadata = EntryMetadata {
+                entry_type,
+                size,
+                modified,
+            };
             Ok(Some(entry_metadata))
         }
         Err(_) => Err(()),

@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { FcFolder } from "react-icons/fc";
 import { entryIconFromFile } from "@/lib/fs.tsx";
 import { getType } from "mime";
+import dayjs from "dayjs";
 
 const FileListItem = ({
   entryItem,
@@ -48,7 +49,10 @@ const FileListItem = ({
         </Link>
       </Td>
       <Td>{entryItem.size ? filesize(entryItem.size) : undefined}</Td>
-      <Td>2023</Td>
+      <Td>
+        {entryItem.modified &&
+          dayjs(entryItem.modified).format("YYYY-MM-DD HH:mm:ss")}
+      </Td>
     </Tr>
   );
 };
