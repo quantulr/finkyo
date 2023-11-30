@@ -8,11 +8,13 @@ import { getType } from "mime";
 import dayjs from "dayjs";
 
 const FileListItem = ({
-  entryItem,
-  onMediaPreview,
-}: {
+                        entryItem,
+                        onMediaPreview,
+                        onVideoPreview
+                      }: {
   entryItem: EntryItem;
   onMediaPreview: () => void;
+  onVideoPreview: () => void
 }) => {
   const navigate = useNavigate();
   const params = useParams();
@@ -28,6 +30,8 @@ const FileListItem = ({
             } else if (entryItem.entryType === EntryType.File) {
               if (getType(entryItem.name)?.startsWith("image/")) {
                 onMediaPreview();
+              } else if (getType(entryItem.name)?.startsWith("video/")) {
+                onVideoPreview();
               } else {
                 location.href = params["*"]
                   ? `/file_link/${params["*"]}/${entryItem.name}`

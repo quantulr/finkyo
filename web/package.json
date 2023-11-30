@@ -17,19 +17,19 @@
     "axios": "^1.6.2",
     "dayjs": "^1.11.10",
     "filesize": "^10.1.0",
-    "framer-motion": "^10.16.5",
-    "lightgallery": "^2.7.2",
+    "framer-motion": "^10.16.9",
     "mime": "^3.0.0",
     "photoswipe": "^5.4.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^4.12.0",
     "react-router-dom": "^6.20.0",
-    "swr": "^2.2.4"
+    "swr": "^2.2.4",
+    "video.js": "^8.6.1"
   },
   "devDependencies": {
     "@types/mime": "^3.0.4",
-    "@types/node": "^20.10.0",
+    "@types/node": "^20.10.1",
     "@types/react": "^18.2.39",
     "@types/react-dom": "^18.2.17",
     "@typescript-eslint/eslint-plugin": "^6.13.1",
