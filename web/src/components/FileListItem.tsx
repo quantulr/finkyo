@@ -30,9 +30,9 @@ const FileListItem = ({
             } else if (entryItem.entryType === EntryType.File) {
               if (getType(entryItem.name)?.startsWith("image/")) {
                 onMediaPreview();
-              } else if (getType(entryItem.name)?.startsWith("video/")) {
+              } /*else if (getType(entryItem.name)?.startsWith("video/")) {
                 onVideoPreview();
-              } else {
+              }*/ else {
                 location.href = params["*"]
                   ? `/file_link/${params["*"]}/${entryItem.name}`
                   : `/file_link/${entryItem.name}`;
