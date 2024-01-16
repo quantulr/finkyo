@@ -2,6 +2,7 @@ use crate::args::Args;
 use crate::state::AppState;
 use clap::Parser;
 use std::sync::Arc;
+
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -21,10 +22,6 @@ async fn main() {
     let host = "0.0.0.0";
     let app_state = AppState { path };
 
-    // if std::env::var_os("RUST_LOG").is_none() {
-    //     std::env::set_var("RUST_LOG", "finkyo=DEBUG");
-    // }
-
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         // .with(tracing_subscriber::filter)
@@ -33,8 +30,9 @@ async fn main() {
     let app = routes::routes(Arc::new(app_state));
 
     tracing::info!("server running in http://{}:{}.", host, port);
-    axum::Server::bind(&format!("{}:{}", host, port).parse().unwrap())
-        .serve(app.into_make_service())
+
+    let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
         .await
         .unwrap();
+    axum::serve(listener, app).await.unwrap();
 }

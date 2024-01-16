@@ -2,7 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useFileList } from "@/api/files.ts";
 import {
   Icon,
-  Link, Modal, ModalBody, ModalCloseButton, ModalContent, ModalOverlay,
+  Link,
   Spinner,
   Table,
   TableContainer,
@@ -10,7 +10,7 @@ import {
   Td,
   Th,
   Thead,
-  Tr
+  Tr,
 } from "@chakra-ui/react";
 import { EntryItem } from "@/typing/files.ts";
 import { FcLeftUp2 } from "react-icons/fc";
@@ -19,27 +19,24 @@ import { GiEmptyMetalBucket } from "react-icons/gi";
 import { getType } from "mime";
 import ImageSwiper from "@/components/ImageSwiper.tsx";
 import { useMemo, useState } from "react";
-import { VideoJS } from "@/components/VideoJs.tsx";
 
 const FileList = () => {
   const params = useParams();
   const navigate = useNavigate();
   const { entry, error, isLoading } = useFileList(params["*"] ?? undefined);
   const [imagePreviewIndex, setImagePreviewIndex] = useState<number>(-1);
-  const [showVideo, setShowVideo] = useState(false);
   const images = useMemo(() => {
     if (isLoading || error) {
       return [];
     } else {
       return (
-        entry?.data.filter(
-          (entry) => getType(entry.name)?.startsWith("image/")
+        entry?.data.filter((entry) =>
+          getType(entry.name)?.startsWith("image/"),
         ) ?? []
       );
     }
   }, [entry?.data, error, isLoading]);
 
-  const [videoSrc, setVideoSrc] = useState<string>();
   if (isLoading)
     return (
       <div className={"flex h-96 items-center justify-center"}>
@@ -56,55 +53,6 @@ const FileList = () => {
           setImagePreviewIndex(() => -1);
         }}
       />
-      <div className={"w-[300px] h-[200px]"}>
-        <VideoJS options={{
-          fluid: false,
-          controls:true,
-          sources: [{
-            src: "http://localhost:3000/file_link/OneDrive/图片/漂亮的让我面红的可爱女人.mp4",
-            type: "video/mp4"
-          }]
-        }} onReady={() => {
-        }} />
-      </div>
-      {/*<div className={"w-96 h-64"}>*/}
-      {/*  <VideoJS options={{*/}
-      {/*    autoplay: true,*/}
-      {/*    controls: true,*/}
-      {/*    responsive: true,*/}
-      {/*    fluid: true,*/}
-      {/*    sources: [{*/}
-      {/*      src: videoSrc,*/}
-      {/*      type: videoSrc ? getType(videoSrc) : undefined*/}
-      {/*    }]*/}
-      {/*  }} onReady={() => {*/}
-      {/*  }} />*/}
-      {/*</div>*/}
-
-      {/*<Modal colorScheme={"blackAlpha"} size={"full"} isOpen={showVideo} onClose={() => {*/}
-      {/*  setShowVideo(() => false);*/}
-      {/*}}>*/}
-      {/*  <ModalOverlay />*/}
-      {/*  <ModalContent className={"!bg-transparent"}>*/}
-      {/*    <ModalCloseButton />*/}
-      {/*    <div className={"w-screen h-screen my-auto"}>*/}
-      {/*      <VideoJS options={{*/}
-      {/*        autoplay: true,*/}
-      {/*        controls: true,*/}
-      {/*        // responsive: true,*/}
-      {/*        // fluid: true,*/}
-      {/*        sources: [{*/}
-      {/*          src: videoSrc,*/}
-      {/*          type: videoSrc ? getType(videoSrc) : undefined*/}
-      {/*        }]*/}
-      {/*      }} onReady={() => {*/}
-      {/*      }} />*/}
-      {/*    </div>*/}
-      {/*    /!*  <ModalBody>*!/*/}
-      {/*    /!*</ModalBody>*!/*/}
-      {/*  </ModalContent>*/}
-      {/*</Modal>*/}
-      {/*<VideoJS options={} onReady={} />*/}
       {entry?.data.length ? (
         <TableContainer>
           <Table>
@@ -142,15 +90,9 @@ const FileList = () => {
                 <FileListItem
                   onMediaPreview={() => {
                     const index = images.findIndex(
-                      (item) => item.name === entryItem.name
+                      (item) => item.name === entryItem.name,
                     );
                     setImagePreviewIndex(() => index);
-                  }}
-                  onVideoPreview={() => {
-                    setVideoSrc(() => params["*"]
-                      ? `/file_link/${params["*"]}/${entryItem.name}`
-                      : `/file_link/${entryItem.name}`);
-                    setShowVideo(() => true);
                   }}
                   entryItem={entryItem}
                   key={entryItem.name}
