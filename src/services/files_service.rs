@@ -1,6 +1,6 @@
 use axum::http::StatusCode;
 use mime_guess::mime;
-#[cfg(target_os = "macos")]
+#[cfg(target_os = "macos", target_os = "linux")]
 use std::os::unix::fs::MetadataExt;
 #[cfg(target_os = "windows")]
 use std::os::windows::fs::{FileTypeExt, MetadataExt};
@@ -105,7 +105,7 @@ pub async fn get_entry_metadata(entry: &DirEntry) -> Result<Option<EntryMetadata
     }
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(target_os = "macos", target_os = "linux")]
 pub async fn get_entry_metadata(entry: &DirEntry) -> Result<Option<EntryMetadata>, ()> {
     match entry.metadata().await {
         Ok(meta) => {
