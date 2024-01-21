@@ -20,6 +20,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: cd web directory
+      run: cd web
     - uses: pnpm/action-setup@v2
       with:
         version: 8
@@ -30,7 +32,6 @@ jobs:
         cache: 'pnpm'
     - name: Build web
       run: |
-        cd web
         pnpm install
         pnpm build
         cd ..
