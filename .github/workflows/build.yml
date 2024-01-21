@@ -20,8 +20,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: cd web directory
-      run: cd web
+      with:
+        path: web
     - uses: pnpm/action-setup@v2
       with:
         version: 8
@@ -34,7 +34,8 @@ jobs:
       run: |
         pnpm install
         pnpm build
-        cd ..
+
+    - uses: actions/checkout@v3
     - name: Build rust
       run: cargo build --release --verbose
     - name: Run tests
