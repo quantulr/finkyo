@@ -12,10 +12,10 @@ use crate::response::files::{EntryItem, EntryMetadata, EntryType};
 use crate::utils::image::{get_image_size, ImageDimensions};
 
 pub async fn read_dir(base: &str, path: &str) -> Result<Vec<EntryItem>, (StatusCode, String)> {
-    let path = Path::new(base).join(Path::new(path));
+    let path_buf = Path::new(base).join(Path::new(path));
 
     let mut entrys: Vec<EntryItem> = vec![];
-    match tokio::fs::read_dir(&path).await {
+    match tokio::fs::read_dir(&path_buf).await {
         Ok(mut read_dir) => {
             while let Ok(Some(entry)) = read_dir.next_entry().await {
                 let entry_meta = match get_entry_metadata(&entry).await {
@@ -31,7 +31,7 @@ pub async fn read_dir(base: &str, path: &str) -> Result<Vec<EntryItem>, (StatusC
                 let mut image_size_opt: Option<ImageDimensions> = None;
                 if let Some(mime) = mime_guess::from_path(Path::new(&name)).first() {
                     if mime.type_().eq(&mime::IMAGE) {
-                        let image_path = path.join(&name);
+                        let image_path = path_buf.join(&name);
                         image_size_opt = match get_image_size(&image_path) {
                             Ok(size) => Some(size),
                             Err(_) => None,
@@ -55,7 +55,8 @@ pub async fn read_dir(base: &str, path: &str) -> Result<Vec<EntryItem>, (StatusC
             }
             Ok(entrys)
         }
-        Err(_) => {
+        Err(err) => {
+            println!("{:?},{}", &path_buf.to_str(), err.to_string());
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 String::from("unknown entry type"),

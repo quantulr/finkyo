@@ -23,8 +23,11 @@ const FileListItem = ({
         <Link
           className={"flex h-5 items-center"}
           onClick={() => {
+            console.log(params["*"]);
             if (entryItem.entryType === EntryType.Directory) {
-              navigate(`${entryItem.name}`);
+              navigate(
+                `/browse${params["*"]?.startsWith("/") ? "" : "/"}${params["*"]}/${entryItem.name}`,
+              );
             } else if (entryItem.entryType === EntryType.File) {
               if (getType(entryItem.name)?.startsWith("image/")) {
                 onMediaPreview();
