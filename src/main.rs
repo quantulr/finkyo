@@ -2,6 +2,7 @@ use crate::args::Args;
 use crate::state::AppState;
 use clap::Parser;
 use std::sync::Arc;
+use local_ip_address::{list_afinet_netifas, local_ip};
 
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -22,6 +23,9 @@ async fn main() {
     let host = "0.0.0.0";
     let app_state = AppState { path };
 
+    // tracing_subscriber::fmt()
+    //     .with_max_level(tracing::Level::INFO)
+    //     .init();
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         // .with(tracing_subscriber::filter)
@@ -29,7 +33,13 @@ async fn main() {
 
     let app = routes::routes(Arc::new(app_state));
 
-    tracing::info!("server running in http://{}:{}.", host, port);
+    let network_interfaces = list_afinet_netifas().unwrap();
+    for (name, ip) in network_interfaces.iter() {
+        println!("{}:\t{:?}", name, ip);
+        if ip.is_ipv4() {
+            tracing::info!("server running in http://{:?}:{}.", ip, port);
+        }
+    }
 
     let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
         .await
