@@ -1,4 +1,4 @@
-name: Build Windows
+name: Publish binary for Windows
 
 on:
   push:
