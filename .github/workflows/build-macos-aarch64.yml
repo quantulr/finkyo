@@ -1,4 +1,4 @@
-name: Publish binary for Linux
+name: Publish binary for macOS aarch64
 
 on:
   push:

@@ -1,4 +1,4 @@
-name: Publish binary for Linux
+name: Publish binary for Linux aarch64
 
 on:
   push:
@@ -37,6 +37,9 @@ jobs:
         pnpm install
         pnpm build
         cd ..
+
+    - name: Add linux aarch64 target
+      run: rustup target add aarch64-unknown-linux-gnu
 
     - name: Build rust
       run: cargo build --release --verbose --target aarch64-unknown-linux-gnu

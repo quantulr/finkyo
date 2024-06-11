@@ -1,4 +1,4 @@
-name: Publish binary for Windows
+name: Publish binary for Windows amd64
 
 on:
   push:
