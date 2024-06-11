@@ -39,7 +39,7 @@ jobs:
         cd ..
 
     - name: Add linux aarch64 target
-      run: rustup target add aarch64-unknown-linux-gnu
+      run: rustup target add aarch64-unknown-linux-musl
 
     - name: Build rust
       run: cargo build --release --verbose --target aarch64-unknown-linux-musl
