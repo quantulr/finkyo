@@ -52,5 +52,5 @@ jobs:
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: target/release/finkyo
-        asset_name: finkyo-linux-amd64
+        asset_name: finkyo-linux-aarch64
         tag: ${{ github.ref }}
