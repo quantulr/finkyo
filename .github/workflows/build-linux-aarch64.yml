@@ -1,0 +1,68 @@
+name: Publish binary for Linux aarch64
+
+on:
+  push:
+    tags:
+      - v*
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: pnpm/action-setup@v2
+      with:
+        version: 9
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'pnpm'
+        cache-dependency-path: web/pnpm-lock.yaml
+
+    - name: Build web
+      run: |
+        cd web
+        pnpm install
+        pnpm build
+        cd ..
+
+    - name: Build binary
+      uses: houseabsolute/actions-rust-cross@v0
+      with:
+        command: build
+        target: aarch64-unknown-linux-gnu
+        args: --release --verbose
+        strip: true
+
+    - name: Run tests
+      uses: houseabsolute/actions-rust-cross@v0
+      with:
+        command: test
+        target: aarch64-unknown-linux-gnu
+        args: --release --verbose
+
+    # - name: Build rust
+    #   run: cargo build --release --verbose --target aarch64-unknown-linux-gnu
+
+    # - name: Run tests
+    #   run: cargo test --release --verbose --target aarch64-unknown-linux-gnu
+
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: target/release/finkyo
+        asset_name: finkyo-linux-aarch64
+        tag: ${{ github.ref }}
