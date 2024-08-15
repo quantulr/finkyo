@@ -53,16 +53,10 @@ jobs:
         target: aarch64-unknown-linux-gnu
         args: --release --verbose
 
-    # - name: Build rust
-    #   run: cargo build --release --verbose --target aarch64-unknown-linux-gnu
-
-    # - name: Run tests
-    #   run: cargo test --release --verbose --target aarch64-unknown-linux-gnu
-
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: target/release/finkyo
+        file: target/aarch64-unknown-linux-gnu/release/finkyo
         asset_name: finkyo-linux-aarch64
         tag: ${{ github.ref }}
