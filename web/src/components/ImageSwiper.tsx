@@ -1,7 +1,6 @@
 import PhotoSwipeLightbox from "photoswipe/lightbox";
 import "photoswipe/style.css";
 import { useEffect, useRef } from "react";
-import { EntryItem } from "@/typing/files.ts";
 import { useParams } from "react-router-dom";
 
 const ImageSwiper = ({

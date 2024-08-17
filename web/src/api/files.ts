@@ -1,7 +1,5 @@
-import request from "../lib/request.ts";
+import request from "@/lib/request.ts";
 import useSWR from "swr";
-import { BaseResponse } from "@/typing/response.ts";
-import { EntryItem } from "@/typing/files.ts";
 
 export const useFileList = (path?: string) => {
   const fetcher = (key: string) =>

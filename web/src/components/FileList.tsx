@@ -12,13 +12,13 @@ import {
   Thead,
   Tr,
 } from "@chakra-ui/react";
-import { EntryItem } from "@/typing/files.ts";
 import { FcLeftUp2 } from "react-icons/fc";
 import FileListItem from "@/components/FileListItem.tsx";
 import { GiEmptyMetalBucket } from "react-icons/gi";
 import { getType } from "mime";
 import ImageSwiper from "@/components/ImageSwiper.tsx";
 import { useMemo, useState } from "react";
+import { EntryItem } from "@/typing/files.ts";
 
 const FileList = () => {
   const params = useParams();
@@ -59,8 +59,9 @@ const FileList = () => {
             <Thead>
               <Tr>
                 <Th>NAME</Th>
-                <Th className={"w-40"}>SIZE</Th>
-                <Th className={"w-40"}>MODIFIED TIME</Th>
+                <Th className={`w-40`}>SIZE</Th>
+                <Th className={`w-40`}>MODIFIED TIME</Th>
+                <Th className={`w-40`}>OPERATION</Th>
               </Tr>
             </Thead>
             <Tbody>

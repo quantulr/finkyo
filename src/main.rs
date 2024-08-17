@@ -1,8 +1,8 @@
 use crate::args::Args;
 use crate::state::AppState;
 use clap::Parser;
-use std::sync::Arc;
 use local_ip_address::{list_afinet_netifas, local_ip};
+use std::sync::Arc;
 
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;

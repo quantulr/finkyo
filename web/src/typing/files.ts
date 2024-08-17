@@ -1,3 +1,8 @@
+export enum EntryType {
+  File = "File",
+  Directory = "Directory",
+}
+
 export interface EntryItem {
   name: string;
   entryType: EntryType;
@@ -5,9 +10,4 @@ export interface EntryItem {
   width?: number;
   height?: number;
   modified?: number;
-}
-
-export enum EntryType {
-  File = "File",
-  Directory = "Directory",
 }

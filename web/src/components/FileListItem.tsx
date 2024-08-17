@@ -1,11 +1,11 @@
-import { Icon, Link, Td, Tr } from "@chakra-ui/react";
-import { EntryItem, EntryType } from "@/typing/files.ts";
+import { Icon, IconButton, Link, Td, Tr } from "@chakra-ui/react";
 import { filesize } from "filesize";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { FcFolder } from "react-icons/fc";
+import { FcFolder, FcDownload } from "react-icons/fc";
 import { entryIconFromFile } from "@/lib/fs.tsx";
 import { getType } from "mime";
 import dayjs from "dayjs";
+import { EntryItem, EntryType } from "@/typing/files.ts";
 
 const FileListItem = ({
   entryItem,
@@ -53,6 +53,25 @@ const FileListItem = ({
       <Td>
         {entryItem.modified &&
           dayjs(entryItem.modified).format("YYYY-MM-DD HH:mm:ss")}
+      </Td>
+      <Td>
+        <div className={"flex"}>
+          {entryItem.entryType === EntryType.File && (
+            <IconButton
+              icon={<Icon as={FcDownload} />}
+              size={"sm"}
+              aria-label={""}
+              onClick={() => {
+                const link = document.createElement("a");
+                link.href = params["*"]
+                  ? `/file_link/${params["*"]}/${entryItem.name}`
+                  : `/file_link/${entryItem.name}`;
+                link.download = entryItem.name;
+                link.click();
+              }}
+            />
+          )}
+        </div>
       </Td>
     </Tr>
   );
