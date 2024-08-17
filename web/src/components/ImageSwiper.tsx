@@ -1,3 +1,4 @@
+import { EntryItem } from "@/typing/files";
 import PhotoSwipeLightbox from "photoswipe/lightbox";
 import "photoswipe/style.css";
 import { useEffect, useRef } from "react";

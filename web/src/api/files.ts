@@ -1,4 +1,5 @@
 import request from "@/lib/request.ts";
+import { EntryItem } from "@/typing/files";
 import useSWR from "swr";
 
 export const useFileList = (path?: string) => {
