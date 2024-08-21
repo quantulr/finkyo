@@ -47,6 +47,7 @@ pub async fn file_link(
 ) -> Result<impl IntoResponse, (StatusCode, Json<Value>)> {
     let root_path = &state.path;
     let path = std::path::Path::new(root_path).join(std::path::Path::new(&path));
+    // ServeFile::new(path)
     match ServeFile::new(path).oneshot(req).await {
         Ok(res) => Ok(res),
         Err(err) => Err((

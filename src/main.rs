@@ -1,9 +1,8 @@
 use crate::args::Args;
 use crate::state::AppState;
 use clap::Parser;
-use local_ip_address::{list_afinet_netifas, local_ip};
+use if_addrs::Interface;
 use std::sync::Arc;
-
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -33,12 +32,20 @@ async fn main() {
 
     let app = routes::routes(Arc::new(app_state));
 
-    let network_interfaces = list_afinet_netifas().unwrap();
-    for (name, ip) in network_interfaces.iter() {
-        println!("{}:\t{:?}", name, ip);
+    for ip in if_addrs::get_if_addrs()
+        .unwrap_or_else(|e| {
+            // error!("Failed to get local interface addresses: {}", e);
+            Default::default()
+        })
+        .into_iter()
+        .map(|iface| iface.ip())
+    // .filter(|ip| ip.is_ipv4() || ip.is_ipv6())
+    {
         if ip.is_ipv4() {
-            tracing::info!("server running in http://{:?}:{}.", ip, port);
-        }
+            tracing::info!("server running in http://{:?}:{}", ip, port);
+        } /* else if ip.is_ipv6() {
+              tracing::info!("server running in http://[{:?}]:{}", ip, port);
+          }*/
     }
 
     let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
