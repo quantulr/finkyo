@@ -54,8 +54,8 @@ const FileList = () => {
         }}
       />
       {entry?.data.length ? (
-        <TableContainer>
-          <Table>
+        <TableContainer overflowX={"hidden"}>
+          <Table layout={"fixed"}>
             <Thead>
               <Tr>
                 <Th>NAME</Th>
@@ -67,7 +67,7 @@ const FileList = () => {
             <Tbody>
               {params["*"] && (
                 <Tr>
-                  <Td colSpan={3}>
+                  <Td colSpan={4}>
                     <Link
                       className={"block h-full w-full"}
                       onClick={() => {

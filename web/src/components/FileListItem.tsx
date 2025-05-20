@@ -1,7 +1,8 @@
 import { Icon, IconButton, Link, Td, Tr } from "@chakra-ui/react";
 import { filesize } from "filesize";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { FcFolder, FcDownload } from "react-icons/fc";
+import { FcFolder } from "react-icons/fc";
+import { IoCloudDownload } from "react-icons/io5";
 import { entryIconFromFile } from "@/lib/fs.tsx";
 import { getType } from "mime";
 import dayjs from "dayjs";
@@ -46,7 +47,7 @@ const FileListItem = ({
                   : undefined
             }
           />
-          <span className={"ml-1"}>{entryItem.name}</span>
+          <span className={"ml-1 truncate"}>{entryItem.name}</span>
         </Link>
       </Td>
       <Td>{entryItem.size ? filesize(entryItem.size) : undefined}</Td>
@@ -58,7 +59,7 @@ const FileListItem = ({
         <div className={"flex"}>
           {entryItem.entryType === EntryType.File && (
             <IconButton
-              icon={<Icon as={FcDownload} />}
+              icon={<Icon as={IoCloudDownload} />}
               size={"sm"}
               aria-label={""}
               onClick={() => {
