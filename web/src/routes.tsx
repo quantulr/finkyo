@@ -1,15 +1,19 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
-import Home from "@/components/Home.tsx";
+import { Navigate, redirect, RouteDefinition } from "@solidjs/router";
+import Home from "@/components/Home";
 
-const routes = createBrowserRouter([
+const routes: RouteDefinition[] = [
   {
     path: "/",
-    element: <Navigate to={"/browse"} />,
+    component: () => <Navigate href={"/browse"} />,
   },
   {
-    path: "/browse/*",
-    element: <Home />,
+    path: "/browse/*path",
+    component: () => <Home />,
   },
-]);
+  {
+    path: "/browse",
+    component: () => <Home />,
+  },
+];
 
 export default routes;

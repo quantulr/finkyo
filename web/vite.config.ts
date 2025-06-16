@@ -1,29 +1,32 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import solidPlugin from "vite-plugin-solid";
+import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath, URL } from "node:url";
 
-
-// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [solidPlugin(), tailwindcss()],
   server: {
+    port: 3030,
     host: true,
     proxy: {
       "/files": {
         target: "http://localhost:3000",
-        changeOrigin: true
+        changeOrigin: true,
         // rewrite: path => path.replace(/^\/files/, '')
-      }, "/file_link": {
+      },
+      "/file_link": {
         target: "http://localhost:3000",
-        changeOrigin: true
+        changeOrigin: true,
         // rewrite: path => path.replace(/^\/files/, '')
-      }
-
-    }
+      },
+    },
   },
   resolve: {
     alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url))
-    }
-  }
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
+  build: {
+    target: "esnext",
+  },
 });

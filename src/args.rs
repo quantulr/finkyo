@@ -10,4 +10,7 @@ pub(crate) struct Args {
 
     #[arg(short, long, default_value_t = 3000)]
     pub port: u16,
+
+    #[arg(short = 'c', long, help = "enable directory compress")]
+    pub compress: bool,
 }

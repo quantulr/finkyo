@@ -1,54 +1,58 @@
-import { EntryItem } from "@/typing/files";
+import { Accessor, createEffect, onCleanup, onMount } from "solid-js";
+import { useParams } from "@solidjs/router";
 import PhotoSwipeLightbox from "photoswipe/lightbox";
 import "photoswipe/style.css";
-import { useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
 
 const ImageSwiper = ({
   images,
   openIndex,
   onClose,
 }: {
-  images: EntryItem[];
-  openIndex: number;
+  images: FileEntryItem[];
+  openIndex: Accessor<number | undefined>;
   onClose: () => void;
 }) => {
-  const photoSwipeRef = useRef<HTMLDivElement>(null);
-  const params = useParams();
-  const lightbox = useRef<PhotoSwipeLightbox | null>(null);
-  useEffect(() => {
-    if (photoSwipeRef.current) {
-      lightbox.current = new PhotoSwipeLightbox({
-        gallery: photoSwipeRef.current,
-        children: "a",
+  const { path }: { path: string } = useParams();
+  let photoSwipeRef: HTMLDivElement | undefined;
+  let lightbox: PhotoSwipeLightbox | null;
+  onMount(() => {
+    if (photoSwipeRef) {
+      lightbox = new PhotoSwipeLightbox({
+        // gallery: photoSwipeRef,
+        // children: "a",
+        dataSource: images.map((image) => ({
+          id: image.name,
+          src: path
+            ? `/file_link/${path}/${image.name}`
+            : `/file_link/${image.name}`,
+          width: image.width,
+          height: image.height,
+        })),
         wheelToZoom: true,
+        showHideAnimationType: "zoom",
         pswpModule: () => import("photoswipe"),
       });
-      lightbox.current?.on("close", onClose);
-
-      lightbox.current.init();
+      lightbox.on("close", onClose);
+      lightbox.init();
     }
-
-    return () => {
-      lightbox.current?.destroy();
-      lightbox.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (openIndex !== -1) {
-      lightbox.current?.loadAndOpen(openIndex);
+  });
+  onCleanup(() => {
+    lightbox?.destroy();
+    lightbox = null;
+  });
+  createEffect(() => {
+    const index = openIndex();
+    if (index !== undefined) {
+      lightbox?.loadAndOpen(index);
     }
-  }, [openIndex]);
-
+  });
   return (
-    <div className={"image-swiper"} ref={photoSwipeRef}>
+    <div class={"image-swiper"} ref={photoSwipeRef}>
       {images.map((image) => (
         <a
-          key={image.name}
           href={
-            params["*"]
-              ? `/file_link/${params["*"]}/${image.name}`
+            path
+              ? `/file_link/${path}/${image.name}`
               : `/file_link/${image.name}`
           }
           data-pswp-width={image.width}
@@ -58,5 +62,4 @@ const ImageSwiper = ({
     </div>
   );
 };
-
 export default ImageSwiper;

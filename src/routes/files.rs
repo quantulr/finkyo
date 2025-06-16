@@ -7,7 +7,7 @@ use std::sync::Arc;
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/files/", get(list_root_dir))
-        .route("/files/*path", get(list_dir))
-        .route("/file_link/*path", get(file_link))
+        .route("/files/{*path}", get(list_dir))
+        .route("/file_link/{*path}", get(file_link))
         .with_state(state)
 }

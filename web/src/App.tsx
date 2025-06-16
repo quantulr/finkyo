@@ -1,9 +1,10 @@
-import "./App.css";
-import { RouterProvider } from "react-router-dom";
-import routes from "@/routes.tsx";
+import type { Component } from "solid-js";
 
-function App() {
-  return <RouterProvider router={routes} />;
-}
+import { Router } from "@solidjs/router";
+import routes from "@/routes";
+
+const App: Component = () => {
+  return <Router>{routes}</Router>;
+};
 
 export default App;

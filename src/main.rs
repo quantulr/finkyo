@@ -1,7 +1,6 @@
 use crate::args::Args;
 use crate::state::AppState;
 use clap::Parser;
-use if_addrs::Interface;
 use std::sync::Arc;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -21,6 +20,8 @@ async fn main() {
     let path = args.path;
     let host = "0.0.0.0";
     let app_state = AppState { path };
+    let enable_compress = args.compress;
+    println!("{}", enable_compress);
 
     // tracing_subscriber::fmt()
     //     .with_max_level(tracing::Level::INFO)
@@ -33,7 +34,7 @@ async fn main() {
     let app = routes::routes(Arc::new(app_state));
 
     for ip in if_addrs::get_if_addrs()
-        .unwrap_or_else(|e| {
+        .unwrap_or_else(|_e| {
             // error!("Failed to get local interface addresses: {}", e);
             Default::default()
         })

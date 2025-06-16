@@ -1,6 +1,5 @@
 use crate::handler::web::static_handler;
 use crate::state::AppState;
-use axum::extract::MatchedPath;
 use axum::http::Request;
 use axum::Router;
 use std::sync::Arc;

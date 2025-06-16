@@ -1,51 +1,98 @@
-import { useParams } from "react-router-dom";
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  Icon,
-} from "@chakra-ui/react";
-import { FaChevronRight } from "react-icons/fa6";
-import { useMemo } from "react";
-import { HiOutlineHome } from "react-icons/hi2";
+  IconArrowRight,
+  IconChevronRight,
+  IconHome,
+} from "@tabler/icons-solidjs";
+import { useNavigate, useParams } from "@solidjs/router";
+import { createMemo, onCleanup, onMount } from "solid-js";
+
+import { createOverlayScrollbars } from "overlayscrollbars-solid";
 
 const BreadcrumbNavigation = () => {
-  const params = useParams();
-  const links = useMemo(
-    () => params["*"]?.split("/").filter((item) => !!item) ?? [],
-    [params],
+  const navigate = useNavigate();
+  const params: { path: string } = useParams();
+  let scrollRef: HTMLDivElement | undefined;
+  const links = createMemo(
+    () =>
+      params.path?.split("/")?.map((link) => ({
+        path: link,
+        label: decodeURIComponent(link),
+      })) ?? [],
   );
+
+  const [initialize, instance] = createOverlayScrollbars({
+    options: {
+      scrollbars: {
+        autoHide: "leave",
+      },
+    },
+  });
+  onMount(() => {
+    if (scrollRef) {
+      initialize(scrollRef);
+    }
+  });
+  onCleanup(() => {
+    instance()?.destroy();
+  });
   return (
-    <Breadcrumb
-      className={"overflow-x-auto"}
-      separator={<Icon as={FaChevronRight} boxSize={2} />}
-    >
-      <BreadcrumbItem isCurrentPage={links.length === 0}>
-        <BreadcrumbLink
-          className={`rounded p-1 leading-none ${
-            links.length === 0 ? "" : "hover:bg-gray-200"
-          }`}
-          href={"/browse"}
+    <div ref={scrollRef}>
+      <div class={"flex h-10 min-w-max shrink-0 items-center truncate"}>
+        <button
+          onClick={() => {
+            navigate(`/browse`);
+          }}
+          class={
+            "flex cursor-pointer items-center rounded-lg px-1 py-0.5 transition-all hover:bg-gray-300"
+          }
         >
-          <Icon as={HiOutlineHome} />
-        </BreadcrumbLink>
-      </BreadcrumbItem>
-      {links.map((item, index) => (
-        <BreadcrumbItem key={index} isCurrentPage={index === links.length - 1}>
-          <BreadcrumbLink
-            className={`${
-              index === links.length - 1 ? "" : "hover:bg-gray-200"
-            } rounded p-1 leading-none`}
-            href={links
-              .slice(0, index + 1)
-              .reduce((acc, cur) => `${acc}/${cur}`, "/browse")}
-          >
-            {item}
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-      ))}
-    </Breadcrumb>
+          <IconHome />
+        </button>
+        {links().length && <Separator />}
+        {links().length &&
+          links()
+            .map((link, index) => (
+              <BreadcrumbNavigationItem
+                path={"txt"}
+                label={link.label}
+                onClick={() => {
+                  const path = links()
+                    .slice(0, index + 1)
+                    .map((link) => link.path)
+                    .join("/");
+                  navigate(`/browse/${path}`);
+                }}
+              />
+            ))
+            .reduce((prev, cur) => [prev, <Separator />, cur])}
+      </div>
+    </div>
   );
+};
+
+const BreadcrumbNavigationItem = ({
+  path,
+  label,
+  onClick,
+}: {
+  path: string;
+  label: string;
+  onClick: () => void;
+}) => {
+  return (
+    <div
+      class={
+        "flex cursor-pointer items-center rounded-lg px-1 py-0.5 transition-all hover:bg-gray-300"
+      }
+      onClick={onClick}
+    >
+      {label}
+    </div>
+  );
+};
+
+const Separator = () => {
+  return <IconChevronRight class={"mx-0.5 size-4"} />;
 };
 
 export default BreadcrumbNavigation;
