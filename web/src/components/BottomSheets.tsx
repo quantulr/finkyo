@@ -8,15 +8,17 @@ const BottomSheets = () => {
     contextMenuStore;
   const params = useParams();
   return (
-    <>
+    <div
+      class={`fixed left-0 z-40 h-[100dvh] w-[100dvw] bg-[#45454512] transition-all duration-500 ${showContextMenu() && openType() === OpenType.BottomSheets ? "bottom-0" : "-bottom-full"}`}
+      onClick={() => {
+        closeContextMenu();
+      }}
+    >
       <div
-        class={`fixed left-0 z-40 h-[100dvh] w-[100dvw] bg-[#45454512] transition-all duration-500 ${showContextMenu() && openType() === OpenType.BottomSheets ? "bottom-0" : "-bottom-full"}`}
-        onClick={() => {
-          closeContextMenu();
+        class={`fixed z-50 rounded-t-3xl bg-[#f5f5f3] px-6 pt-6 shadow-2xl ${showContextMenu() && openType() === OpenType.BottomSheets ? "bottom-0" : "-bottom-full"} left-0 h-[60dvh] w-screen transition-all duration-500`}
+        onClick={(ev) => {
+          ev.stopPropagation();
         }}
-      ></div>
-      <div
-        class={`fixed z-50 rounded-t-3xl bg-[#f5f5f3] px-6 pt-6 shadow-2xl ${showContextMenu() ? "bottom-0" : "-bottom-full"} left-0 h-[60dvh] w-screen transition-all duration-500`}
       >
         <div class={"flex items-center"}>
           <div class={"size-20"}>
@@ -34,7 +36,8 @@ const BottomSheets = () => {
                     class={
                       "flex h-12 w-full cursor-pointer items-center px-4 active:bg-gray-200"
                     }
-                    onClick={() => {
+                    onClick={(ev) => {
+                      // ev.stopPropagation();
                       const file_link = params.path
                         ? `/file_link/${params.path}/${entry()?.name}`
                         : `/file_link/${entry()?.name}`;
@@ -63,7 +66,7 @@ const BottomSheets = () => {
               ])}
         </ul>
       </div>
-    </>
+    </div>
   );
 };
 
