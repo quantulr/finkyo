@@ -1,4 +1,4 @@
-import contextMenuStore from "@/store/context_menu";
+import contextMenuStore, { OpenType } from "@/store/context_menu";
 import {
   IconCopy,
   IconFileDownload,
@@ -7,7 +7,7 @@ import {
 } from "@tabler/icons-solidjs";
 import { useParams } from "@solidjs/router";
 
-const menus: {
+export const menus: {
   icon: any;
   label: string;
   action: string;
@@ -20,11 +20,11 @@ const menus: {
 
 const ContextMenu = () => {
   const params = useParams();
-  const { showContextMenu, pos, closeContextMenu, entry, actions } =
+  const { showContextMenu, pos, closeContextMenu, entry, actions, openType } =
     contextMenuStore;
   return (
     <div
-      class={`fixed top-0 left-0 z-10 h-[100dvh] w-[100dvw] opacity-100 ${showContextMenu() ? "block" : "hidden"}`}
+      class={`fixed top-0 left-0 z-10 h-[100dvh] w-[100dvw] opacity-100 ${showContextMenu() && openType() === OpenType.ContextMenu ? "block" : "hidden"}`}
       onClick={() => {
         closeContextMenu();
       }}
@@ -53,7 +53,6 @@ const ContextMenu = () => {
                     const file_link = params.path
                       ? `/file_link/${params.path}/${entry()?.name}`
                       : `/file_link/${entry()?.name}`;
-                    console.log(file_link);
                     // return
                     if (item.action === "delete") {
                       console.log("delete item");

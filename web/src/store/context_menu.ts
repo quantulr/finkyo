@@ -1,5 +1,10 @@
 import { createRoot, createSignal } from "solid-js";
 
+export enum OpenType {
+  BottomSheets = "BottomSheets",
+  ContextMenu = "ContextMenu",
+}
+
 const createContextMenuStore = () => {
   const [pos, setPos] = createSignal({
     x: 0,
@@ -7,6 +12,7 @@ const createContextMenuStore = () => {
   });
   const [entry, setEntry] = createSignal<FileEntryItem>();
   const [actions, setActions] = createSignal<string[]>();
+  const [openType, setOpenType] = createSignal<OpenType>(OpenType.ContextMenu);
   const [showContextMenu, setShowContextMenu] = createSignal<boolean>(false);
   const closeContextMenu = () => {
     setShowContextMenu(false);
@@ -14,16 +20,28 @@ const createContextMenuStore = () => {
   const openContextMenu = ({
     pos,
     entry,
-    actions,
+    // actions,
+    openType = OpenType.ContextMenu,
   }: {
-    pos: {
+    pos?: {
       x: number;
       y: number;
     };
     entry: FileEntryItem;
-    actions: string[];
+    // actions: string[];
+    openType?: OpenType;
   }) => {
-    setPos(pos);
+    if (openType === OpenType.ContextMenu) {
+      setPos(pos!);
+    }
+    let actions: string[];
+    // actions
+    if ((entry.entryType as string) === "Directory") {
+      actions = [];
+    } else {
+      actions = ["download"];
+    }
+    setOpenType(openType);
     setEntry(entry);
     setActions(actions);
     setShowContextMenu(true);
@@ -33,6 +51,7 @@ const createContextMenuStore = () => {
     showContextMenu,
     closeContextMenu,
     openContextMenu,
+    openType,
     actions,
     entry,
   };
