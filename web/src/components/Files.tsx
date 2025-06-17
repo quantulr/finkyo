@@ -14,6 +14,7 @@ import { IconLayoutGrid, IconLoader2, IconTable } from "@tabler/icons-solidjs";
 import FileTable from "@/components/FileTable";
 import ContextMenu from "@/components/ContextMenu";
 import BottomSheets from "@/components/BottomSheets";
+import { useQuery } from "@tanstack/solid-query";
 
 enum LayoutType {
   Table = "table",
@@ -24,13 +25,20 @@ const Files = () => {
   // route
   const params: { path?: string } = useParams();
   const navigate = useNavigate();
+  const query = useQuery(() => ({
+    queryKey: [params.path ?? ""],
+    queryFn: ({ queryKey }) =>
+      request.get<never, BaseResponse<FileEntryItem[]>>(
+        `/files/${queryKey[0]}`,
+      ),
+  }));
 
   // fetch file list
-  const [filesResponse] = createResource(
-    () => params.path ?? "",
-    (key) => request.get<never, BaseResponse<FileEntryItem[]>>(`/files/${key}`),
-  );
-  const files = createMemo(() => filesResponse()?.data);
+  /*  const [filesResponse] = createResource(
+      () => params.path ?? "",
+      (key) => request.get<never, BaseResponse<FileEntryItem[]>>(`/files/${key}`),
+    );*/
+  const files = createMemo(() => query.data?.data);
   const images = createMemo(() =>
     files()?.filter((entry) => mime.getType(entry.name)?.startsWith("image/")),
   );
@@ -85,7 +93,7 @@ const Files = () => {
         </div>
         <div class={"flex-[1] overflow-auto"}>
           <Switch>
-            <Match when={filesResponse.loading}>
+            <Match when={query.isPending}>
               <div class={"flex h-full w-full items-center justify-center"}>
                 <IconLoader2 class={"size-12 animate-spin"} />
               </div>

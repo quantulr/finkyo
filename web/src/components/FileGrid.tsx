@@ -23,7 +23,7 @@ const FileGrid = ({
   onEntryClick?: (file: FileEntryItem) => void;
 }) => {
   const { openContextMenu } = contextMenuStore;
-  const { setShowBottomSheets } = bottomSheetsStore;
+  const { openBottomSheets } = bottomSheetsStore;
   return (
     <div class={"grid grid-cols-3 gap-3 md:grid-cols-6 xl:grid-cols-12"}>
       {files()?.map((file, index) => (
@@ -66,16 +66,17 @@ const FileGrid = ({
                 y: event.clientY,
               }*/,
               actions: actions,
-              entry: file.name,
+              entry: file,
             });
           }}
         >
           <button
-            class={"absolute top-1 right-1 p-1 cursor-pointer md:invisible active:bg-blue-300 transition-colors rounded-full"}
+            class={
+              "absolute top-1 right-1 cursor-pointer rounded-full p-1 transition-colors active:bg-blue-300 md:invisible"
+            }
             onClick={(ev) => {
               ev.stopPropagation();
-              console.log("click");
-              setShowBottomSheets(true);
+              openBottomSheets({ file });
             }}
           >
             <IconDots class={`size-5`} />
@@ -90,7 +91,7 @@ const FileGrid = ({
             ) : mime.getType(file.name)?.startsWith("audio") ? (
               <img src={FcAudioFile} class={"size-full"} alt={"audio"} />
             ) : (
-              <div class={"relative"}>
+              <div class={"relative size-full"}>
                 <p
                   class={
                     "absolute top-1/2 left-1/2 z-[1] -translate-1/2 truncate text-2xl font-bold text-white"

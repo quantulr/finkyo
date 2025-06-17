@@ -19,8 +19,7 @@ const menus: {
 ];
 
 const ContextMenu = () => {
-  const { path }: { path?: string } = useParams();
-
+  const params = useParams();
   const { showContextMenu, pos, closeContextMenu, entry, actions } =
     contextMenuStore;
   return (
@@ -51,23 +50,24 @@ const ContextMenu = () => {
                 <li
                   onClick={(ev) => {
                     ev.stopPropagation();
-                    const file_link = path
-                      ? `/file_link/${path}/${entry()}`
-                      : `/file_link/${entry()}`;
+                    const file_link = params.path
+                      ? `/file_link/${params.path}/${entry()?.name}`
+                      : `/file_link/${entry()?.name}`;
+                    console.log(file_link);
+                    // return
                     if (item.action === "delete") {
                       console.log("delete item");
                     } else if (item.action === "open") {
-                      console.log(entry());
                       window.open(file_link);
                     } else if (item.action === "download") {
                       const link = document.createElement("a");
                       link.href = file_link;
-                      link.download = entry() ?? "download";
+                      link.download = entry()?.name ?? "download";
                       link.click();
                     }
                   }}
                   class={
-                    "flex h-10 cursor-pointer items-center px-2 transition-all hover:bg-blue-300 rounded-lg"
+                    "flex h-10 cursor-pointer items-center rounded-lg px-2 transition-all hover:bg-blue-300"
                   }
                 >
                   {<item.icon class={"size-6"} />}

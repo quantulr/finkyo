@@ -5,7 +5,7 @@ const createContextMenuStore = () => {
     x: 0,
     y: 0,
   });
-  const [entry, setEntry] = createSignal<string>();
+  const [entry, setEntry] = createSignal<FileEntryItem>();
   const [actions, setActions] = createSignal<string[]>();
   const [showContextMenu, setShowContextMenu] = createSignal<boolean>(false);
   const closeContextMenu = () => {
@@ -20,7 +20,7 @@ const createContextMenuStore = () => {
       x: number;
       y: number;
     };
-    entry: string;
+    entry: FileEntryItem;
     actions: string[];
   }) => {
     setPos(pos);

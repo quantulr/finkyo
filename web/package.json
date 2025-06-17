@@ -25,6 +25,8 @@
     "@solid-devtools/overlay": "^0.33.3",
     "@solidjs/router": "^0.15.3",
     "@tabler/icons-solidjs": "^3.34.0",
+    "@tanstack/solid-query": "^5.80.7",
+    "@tanstack/solid-table": "^8.21.3",
     "axios": "^1.10.0",
     "flat-color-icons": "^1.1.0",
     "lucide-solid": "^0.514.0",
