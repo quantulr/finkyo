@@ -119,7 +119,12 @@ const Files = () => {
                           );
                           (imageIndex ?? -1) >= 0 && setOpenIndex(imageIndex);
                         } else if (
-                          mime.getType(entry.name)?.startsWith("video")
+                          mime.getType(entry.name)?.startsWith("video") ||
+                          mime.getType(entry.name)?.startsWith("audio") ||
+                          mime.getType(entry.name)?.startsWith("text") ||
+                          mime
+                            .getType(entry.name)
+                            ?.startsWith("application/pdf")
                         ) {
                           window.open(
                             params.path
