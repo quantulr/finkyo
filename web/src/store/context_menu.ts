@@ -15,6 +15,8 @@ const createContextMenuStore = () => {
   const [openType, setOpenType] = createSignal<OpenType>(OpenType.ContextMenu);
   const [showContextMenu, setShowContextMenu] = createSignal<boolean>(false);
   const closeContextMenu = () => {
+    setEntry(undefined);
+    setActions(undefined);
     setShowContextMenu(false);
   };
   const openContextMenu = ({

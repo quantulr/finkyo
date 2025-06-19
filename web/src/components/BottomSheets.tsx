@@ -2,11 +2,12 @@ import contextMenuStore, { OpenType } from "@/store/context_menu";
 import { menus } from "@/components/ContextMenu";
 import { useParams } from "@solidjs/router";
 import EntryIcon from "@/components/EntryIcon";
+import { createMemo, Show } from "solid-js";
 
 const BottomSheets = () => {
   const { showContextMenu, openType, entry, closeContextMenu, actions } =
     contextMenuStore;
-  const params = useParams();
+  const params: { path?: string } = useParams();
   return (
     <div
       class={`fixed left-0 z-40 h-[100dvh] w-[100dvw] bg-[#45454512] transition-all duration-500 ${showContextMenu() && openType() === OpenType.BottomSheets ? "bottom-0" : "-bottom-full"}`}

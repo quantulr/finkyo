@@ -1,5 +1,7 @@
 import { Navigate, redirect, RouteDefinition } from "@solidjs/router";
 import Home from "@/components/Home";
+import VideoPlayer from "@/components/VideoPlayer";
+import MediaPlayer from "@/components/MediaPlayer";
 
 const routes: RouteDefinition[] = [
   {
@@ -13,6 +15,14 @@ const routes: RouteDefinition[] = [
   {
     path: "/browse",
     component: () => <Home />,
+  },
+  {
+    path: "/video/*uri",
+    component: () => <VideoPlayer />,
+  },
+  {
+    path: "/player/*uri",
+    component: () => <MediaPlayer />,
   },
 ];
 

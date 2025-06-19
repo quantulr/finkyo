@@ -1,11 +1,5 @@
 import { useNavigate, useParams } from "@solidjs/router";
-import {
-  createMemo,
-  createResource,
-  createSignal,
-  Match,
-  Switch,
-} from "solid-js";
+import { createMemo, createSignal, Match, Switch } from "solid-js";
 import request from "@/lib/request";
 import mime from "mime";
 import FileGrid from "@/components/FileGrid";
@@ -119,8 +113,22 @@ const Files = () => {
                           );
                           (imageIndex ?? -1) >= 0 && setOpenIndex(imageIndex);
                         } else if (
-                          mime.getType(entry.name)?.startsWith("video") ||
-                          mime.getType(entry.name)?.startsWith("audio") ||
+                          mime.getType(entry.name)?.startsWith("video")
+                        ) {
+                          const videoPlayUrl = params.path
+                            ? `/player/${params.path}/${entry.name}`
+                            : `/player/${entry.name}`;
+                          // navigate(videoPlayUrl);
+                          window.open(videoPlayUrl);
+                        } else if (
+                          mime.getType(entry.name)?.startsWith("audio")
+                        ) {
+                          const mediaPlayUrl = params.path
+                            ? `/player/${params.path}/${entry.name}`
+                            : `/player/${entry.name}`;
+                          window.open(mediaPlayUrl);
+                        } else if (
+                          // mime.getType(entry.name)?.startsWith("audio") ||
                           mime.getType(entry.name)?.startsWith("text") ||
                           mime
                             .getType(entry.name)
