@@ -66,12 +66,15 @@ const MediaPlayer = () => {
               "progress mx-auto h-2 w-full overflow-hidden rounded-full bg-red-100"
             }
             onClick={(ev) => {
-              if (videoPlayerRef) {
-                const rect = ev.currentTarget.getBoundingClientRect();
-                const clickX = ev.clientX - rect.left; // X position within the element
-                const percentage = clickX / rect.width; // Calculate percentage
+              const rect = ev.currentTarget.getBoundingClientRect();
+              const clickX = ev.clientX - rect.left; // X position within the element
+              const percentage = clickX / rect.width; // Calculate percentage
+              if (videoPlayerRef && !audioPlayerRef) {
                 videoPlayerRef.currentTime =
                   percentage * videoPlayerRef.duration; // Set new time
+              } else if (audioPlayerRef && !videoPlayerRef) {
+                audioPlayerRef.currentTime =
+                  percentage * audioPlayerRef.duration; // Set new time
               }
             }}
           >
