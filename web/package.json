@@ -28,6 +28,8 @@
     "@tanstack/solid-query": "^5.80.10",
     "@tanstack/solid-table": "^8.21.3",
     "axios": "^1.10.0",
+    "date-fns": "^4.1.0",
+    "dayjs": "^1.11.13",
     "flat-color-icons": "^1.1.0",
     "lucide-solid": "^0.514.0",
     "mime": "^4.0.7",

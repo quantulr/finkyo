@@ -1,19 +1,39 @@
 import { useNavigate, useParams } from "@solidjs/router";
-import { createMemo, createSignal, Match, Switch } from "solid-js";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  Match,
+  Switch,
+} from "solid-js";
 import request from "@/lib/request";
 import mime from "mime";
 import FileGrid from "@/components/FileGrid";
 import createPhotoSwipe from "@/hooks/createPhotoSwipe";
-import { IconLayoutGrid, IconLoader2, IconTable } from "@tabler/icons-solidjs";
+import {
+  IconLayoutGrid,
+  IconLoader2,
+  IconSearch,
+  IconSortDescending,
+  IconTable,
+} from "@tabler/icons-solidjs";
 import FileTable from "@/components/FileTable";
 import ContextMenu from "@/components/ContextMenu";
 import BottomSheets from "@/components/BottomSheets";
 import { useQuery } from "@tanstack/solid-query";
+/* import { createOverlayScrollbars } from "overlayscrollbars-solid"; */
+import {
+  createColumnHelper,
+  createSolidTable,
+  getCoreRowModel,
+} from "@tanstack/solid-table";
 
 enum LayoutType {
   Table = "table",
   Grid = "grid",
 }
+
+const columnHelper = createColumnHelper<FileEntryItem>();
 
 const Files = () => {
   // route
@@ -36,6 +56,18 @@ const Files = () => {
   const images = createMemo(() =>
     files()?.filter((entry) => mime.getType(entry.name)?.startsWith("image/")),
   );
+  let fileTable: any;
+  createEffect(() => {
+    fileTable = createSolidTable({
+      data: files() ?? [],
+      columns: [
+        columnHelper.accessor("name", {
+          header: "文件名",
+        }),
+      ],
+      getCoreRowModel: getCoreRowModel(),
+    });
+  });
 
   // photo swipe
   const [openIndex, setOpenIndex] = createSignal<number | undefined>();
@@ -48,6 +80,29 @@ const Files = () => {
   // switch grid and table layout
   const [layout, setLayout] = createSignal<LayoutType>(LayoutType.Grid);
 
+  /*
+  let scrollRef: HTMLDivElement | undefined;
+  const [initialize, instance] = createOverlayScrollbars({
+    options: {
+      scrollbars: {
+        autoHide: "leave",
+      },
+    },
+  });
+
+  createEffect(() => {
+    onMount(() => {
+      if (scrollRef) {
+        console.log("initialize scrollRef", scrollRef);
+
+        initialize(scrollRef);
+      }
+    });
+    onCleanup(() => {
+      instance()?.destroy();
+    });
+  });
+*/
   return (
     <>
       <ContextMenu />
@@ -59,10 +114,27 @@ const Files = () => {
       >
         <div class={"flex h-10 items-center justify-between px-4"}>
           <div class={"left"}></div>
-          <div class={"right"}>
+
+          <div class={"right flex items-center"}>
+            <button
+              class={"cursor-pointer rounded-lg p-1 active:bg-blue-200"}
+              onClick={() => {
+                console.log(fileTable.getRowModel().rows);
+              }}
+            >
+              <IconSortDescending class={"size-6 text-blue-500"} />
+            </button>
+            <button
+              class={"ml-2 cursor-pointer rounded-lg p-1 active:bg-blue-200"}
+              onClick={() => {
+                console.log(fileTable.getRowModel().rows);
+              }}
+            >
+              <IconSearch class={"size-6 text-blue-500"} />
+            </button>
             <div
               class={
-                "flex h-8 w-16 justify-between overflow-hidden rounded-lg border-2 border-blue-200"
+                "ml-2 flex h-8 w-16 justify-between overflow-hidden rounded-lg border-2 border-blue-200"
               }
             >
               <button
@@ -113,22 +185,14 @@ const Files = () => {
                           );
                           (imageIndex ?? -1) >= 0 && setOpenIndex(imageIndex);
                         } else if (
-                          mime.getType(entry.name)?.startsWith("video")
-                        ) {
-                          const videoPlayUrl = params.path
-                            ? `/player/${params.path}/${entry.name}`
-                            : `/player/${entry.name}`;
-                          // navigate(videoPlayUrl);
-                          window.open(videoPlayUrl);
-                        } else if (
+                          mime.getType(entry.name)?.startsWith("video") ||
                           mime.getType(entry.name)?.startsWith("audio")
                         ) {
                           const mediaPlayUrl = params.path
-                            ? `/player/${params.path}/${entry.name}`
-                            : `/player/${entry.name}`;
+                            ? `/play/${params.path}/${entry.name}`
+                            : `/play/${entry.name}`;
                           window.open(mediaPlayUrl);
                         } else if (
-                          // mime.getType(entry.name)?.startsWith("audio") ||
                           mime.getType(entry.name)?.startsWith("text") ||
                           mime
                             .getType(entry.name)

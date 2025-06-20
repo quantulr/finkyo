@@ -16,7 +16,7 @@ const routes: RouteDefinition[] = [
     component: () => <Home />,
   },
   {
-    path: "/player/*uri",
+    path: "/play/*uri",
     component: () => <MediaPlayer />,
   },
 ];
