@@ -1,5 +1,19 @@
-import { useNavigate, useParams, useSearchParams } from "@solidjs/router";
-import { createMemo, createSignal, Match, Switch } from "solid-js";
+import {
+  useBeforeLeave,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "@solidjs/router";
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  Match,
+  onCleanup,
+  onMount,
+  Switch,
+} from "solid-js";
 import request from "@/lib/request";
 import mime from "mime";
 import FileGrid from "@/components/FileGrid";
@@ -15,6 +29,7 @@ import FileTable from "@/components/FileTable";
 import ContextMenu from "@/components/ContextMenu";
 import BottomSheets from "@/components/BottomSheets";
 import { useQuery } from "@tanstack/solid-query";
+import saved_position from "@/store/saved_position";
 
 enum LayoutType {
   Table = "table",
@@ -24,6 +39,7 @@ enum LayoutType {
 const Files = () => {
   // route
   const params: { path?: string } = useParams();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams<{ q?: string }>();
   const navigate = useNavigate();
   const query = useQuery(() => ({
@@ -34,6 +50,28 @@ const Files = () => {
       ),
   }));
 
+  /* 离开时记录路径和滚动距离，返回时滚动到已记录的滚动距离 */
+  let scrollRef: HTMLDivElement | undefined;
+  const { pushSavedPosition, savedPositionList } = saved_position;
+  useBeforeLeave(() => {
+    pushSavedPosition({
+      path: `${location.pathname}${location.search}`,
+      top: scrollRef?.scrollTop,
+    });
+  });
+
+  createEffect(() => {
+    const savedPosition = savedPositionList().get(
+      `${location.pathname}${location.search}`,
+    );
+    if (savedPosition && files()?.length) {
+      scrollRef?.scrollTo({
+        top: savedPosition.top,
+      });
+    }
+  });
+  /* end */
+
   // fetch file list
   /*  const [filesResponse] = createResource(
       () => params.path ?? "",
@@ -41,7 +79,7 @@ const Files = () => {
     );*/
   const files = createMemo(() =>
     query.data?.data.filter((entry) =>
-      entry.name.includes(searchParams.q ?? ""),
+      entry.name.toLowerCase().includes(searchParams.q?.toLowerCase() ?? ""),
     ),
   );
   const images = createMemo(() =>
@@ -62,31 +100,21 @@ const Files = () => {
   /* 搜索 */
   const [showSearchField, setShowSearchField] = createSignal(false);
   let searchFieldRef: HTMLInputElement | undefined;
+  const onCtrlF = (ev: KeyboardEvent) => {
+    if (ev.ctrlKey && (ev.key === "f" || ev.key === "F")) {
+      ev.preventDefault();
+      setShowSearchField(true);
+      searchFieldRef?.focus();
+    }
+  };
+  onMount(() => {
+    document.addEventListener("keydown", onCtrlF);
+  });
+  onCleanup(() => {
+    document.removeEventListener("keydown", onCtrlF);
+  });
+
   /* 搜索 end */
-
-  /*
-  let scrollRef: HTMLDivElement | undefined;
-  const [initialize, instance] = createOverlayScrollbars({
-    options: {
-      scrollbars: {
-        autoHide: "leave",
-      },
-    },
-  });
-
-  createEffect(() => {
-    onMount(() => {
-      if (scrollRef) {
-        console.log("initialize scrollRef", scrollRef);
-
-        initialize(scrollRef);
-      }
-    });
-    onCleanup(() => {
-      instance()?.destroy();
-    });
-  });
-*/
 
   const onEntryClick = (entry: FileEntryItem) => {
     if ((entry.entryType as string) === "Directory") {
@@ -168,7 +196,7 @@ const Files = () => {
             <button
               class={`cursor-pointer rounded-lg transition-all active:bg-blue-200 ${
                 showSearchField() || searchParams.q
-                  ? "size-0"
+                  ? "w-0 overflow-hidden"
                   : "ml-2 size-8 p-1"
               }`}
               onClick={() => {
@@ -176,11 +204,7 @@ const Files = () => {
                 searchFieldRef?.focus();
               }}
             >
-              <IconSearch
-                class={`text-blue-500 ${
-                  showSearchField() || searchParams.q ? "size-0" : "size-6"
-                }`}
-              />
+              <IconSearch class={`size-6 text-blue-500`} />
             </button>
 
             <div
@@ -208,7 +232,7 @@ const Files = () => {
             </div>
           </div>
         </div>
-        <div class={"flex-[1] overflow-auto"}>
+        <div class={"flex-[1] overflow-auto"} ref={scrollRef}>
           <Switch>
             <Match when={query.isPending}>
               <div class={"flex h-full w-full items-center justify-center"}>
