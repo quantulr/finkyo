@@ -1,3 +1,4 @@
+import isTouchDevice from "@/lib/isTouchDevice";
 import request from "@/lib/request";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
@@ -19,6 +20,7 @@ import {
   createMemo,
   createSignal,
   Match,
+  onCleanup,
   onMount,
   Show,
   Switch,
@@ -51,29 +53,20 @@ const MediaPlayer = () => {
   /* 播放列表 end */
 
   /* 播放器控制 */
-  const [showControls, setShowControls] = createSignal(false);
-  const [controlsHover, setControlsHover] = createSignal(false);
-  const [controlsTimeout, setControlsTimeout] = createSignal<number>(3000);
-  let timeout: any | undefined;
-  /*   createEffect(() => {
-    if (showControls()) {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        setShowControls(false);
-      }, 3000);
-    }
-  }); */
+  const [showControls, setShowControls] = createSignal(true); // 控制播放器控制栏的显示与隐藏
+  let timeout: any | undefined; // 用于控制隐藏播放器控制栏的定时器
+
   const [playerState, setPlayerState] = createSignal({
     playing: false,
     currentTime: 0,
     duration: 0,
     muted: type()?.startsWith("video") ? true : false,
-  });
-  let videoPlayerRef: HTMLVideoElement | undefined;
-  let audioPlayerRef: HTMLAudioElement | undefined;
+  }); // 播放器状态
+  let videoPlayerRef: HTMLVideoElement | undefined; // 视频播放器引用
+  let audioPlayerRef: HTMLAudioElement | undefined; // 音频播放器引用
   /* 播放器控制 end */
 
-  /* 切换 */
+  /* 切换媒体 */
   const navigate = useNavigate();
   createEffect(() => {
     if (mime.getType(params.uri)?.startsWith("audio/")) {
@@ -95,36 +88,17 @@ const MediaPlayer = () => {
       }));
     }
   });
+  /* 切换媒体 end */
 
-  onMount(() => {
-    window.addEventListener("keydown", (ev) => {
-      if (ev.key === " ") {
-        ev.preventDefault();
-        if (videoPlayerRef && !audioPlayerRef) {
-          if (playerState().playing) {
-            videoPlayerRef.pause();
-          } else {
-            videoPlayerRef.play();
-          }
-        } else if (audioPlayerRef && !videoPlayerRef) {
-          if (playerState().playing) {
-            audioPlayerRef.pause();
-          } else {
-            audioPlayerRef.play();
-          }
-        }
-      }
-    });
-  });
-
+  /* 切换播放状态 */
   const tooglePlay = () => {
-    if (videoPlayerRef && !audioPlayerRef) {
+    if (videoPlayerRef && type()?.startsWith("video")) {
       if (playerState().playing) {
         videoPlayerRef.pause();
       } else {
         videoPlayerRef.play();
       }
-    } else if (audioPlayerRef && !videoPlayerRef) {
+    } else if (audioPlayerRef && type()?.startsWith("audio")) {
       if (playerState().playing) {
         audioPlayerRef.pause();
       } else {
@@ -132,25 +106,43 @@ const MediaPlayer = () => {
       }
     }
   };
+  const handleKeyDown = (ev: KeyboardEvent) => {
+    if (ev.key === " ") {
+      ev.preventDefault();
+      tooglePlay();
+    }
+  };
+  onMount(() => {
+    window.addEventListener("keydown", handleKeyDown);
+  });
+  onCleanup(() => {
+    window.removeEventListener("keydown", handleKeyDown);
+  });
+  /* 切换播放状态 end */
 
   return (
     <div
       class={"h-[100dvh] bg-black"}
       onDblClick={() => {
-        if (window.innerWidth < 768) {
+        if (isTouchDevice()) {
           tooglePlay();
         }
       }}
       onClick={() => {
+        if (showPlayList()) {
+          setShowPlayList(false);
+          return;
+        }
+
         clearTimeout(timeout);
         setShowControls(true);
         timeout = setTimeout(() => {
           setShowControls(false);
         }, 3000);
-        if (window.innerWidth < 768) {
-          return;
+
+        if (!isTouchDevice()) {
+          tooglePlay();
         }
-        tooglePlay();
       }}
     >
       <Show when={type()?.startsWith("audio")}>
@@ -160,16 +152,12 @@ const MediaPlayer = () => {
       </Show>
       <div
         onMouseOver={() => {
-          // setControlsHover(true);
           clearTimeout(timeout);
           setShowControls(true);
           timeout = setTimeout(() => {
             setShowControls(false);
           }, 3000);
         }}
-        /* onMouseLeave={() => {
-          setControlsHover(false);
-        }} */
         class={
           "controls-wrap fixed bottom-0 left-0 z-10 flex h-30 w-[100dvw] items-center justify-center duration-700"
         }
@@ -190,7 +178,7 @@ const MediaPlayer = () => {
             class={`fixed bottom-24 left-0 z-50 max-h-[60dvh] overflow-auto rounded-lg bg-white transition-all ${showPlayList() ? "w-[80dvw]" : "invisible w-0 overflow-hidden"}`}
             style={{
               height: showPlayList()
-                ? `${32 * mediaFiles().length + (mediaFiles().length - 1) * 2}px`
+                ? `${40 * mediaFiles().length + (mediaFiles().length - 1) * 2}px`
                 : "0px",
             }}
             onScroll={() => {
@@ -207,14 +195,14 @@ const MediaPlayer = () => {
                   .map((file) => (
                     <li class={"overflow-hidden"}>
                       <button
-                        class={
-                          "flex h-8 w-full cursor-pointer items-center px-2 hover:bg-blue-100 active:bg-blue-200"
-                        }
+                        class={`flex h-10 w-full cursor-pointer items-center px-2 hover:bg-blue-100 active:bg-blue-200 ${decodeURIComponent(params.uri.split("/").pop() ?? "") === file.name ? "bg-blue-300" : ""}`}
                         onClick={() => {
                           if (type()?.startsWith("audio")) {
                             if (audioPlayerRef) audioPlayerRef.autoplay = true;
                           }
-                          navigate(`/play/${path()}/${file.name}`);
+                          navigate(
+                            `/play/${path() ? `${path()}/` : ""}${file.name}`,
+                          );
                         }}
                       >
                         {mime.getType(file.name)?.startsWith("audio/") ? (
@@ -379,7 +367,7 @@ const MediaPlayer = () => {
               }));
             }}
             ref={videoPlayerRef}
-            class={"h-[100dvh] w-[100dvw] md:h-screen md:w-screen"}
+            class={"h-[100dvh] w-[100dvw]"}
             src={`/file_link/${params.uri}`}
             autoplay={true}
             muted={true}

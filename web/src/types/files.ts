@@ -8,4 +8,6 @@ declare interface FileEntryItem {
   entryType: EntryType.File;
   width?: number;
   height?: number;
+  size?: number;
+  lastModified?: number;
 }

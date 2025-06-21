@@ -5,7 +5,13 @@ import FcVideoFile from "flat-color-icons/svg/video_file.svg";
 import FcAudioFile from "flat-color-icons/svg/audio_file.svg";
 import FcFile from "flat-color-icons/svg/file.svg";
 
-const EntryIcon = ({ entry }: { entry?: FileEntryItem }) => {
+const EntryIcon = ({
+  entry,
+  size,
+}: {
+  entry?: FileEntryItem;
+  size?: number;
+}) => {
   return (
     <>
       {(entry?.entryType as string) === "Directory" ? (

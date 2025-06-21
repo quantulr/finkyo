@@ -18,7 +18,7 @@ const FileGrid = ({
   const { openContextMenu } = contextMenuStore;
   return (
     <div class={"grid grid-cols-3 gap-3 md:grid-cols-6 xl:grid-cols-12"}>
-      {files()?.map((file, index) => (
+      {files()?.map((file) => (
         <div
           class={
             "relative cursor-pointer rounded-md transition-all hover:bg-blue-100 hover:shadow-md"
@@ -53,10 +53,7 @@ const FileGrid = ({
                 40;
             }
             openContextMenu({
-              pos /*: {
-                x: event.clientX,
-                y: event.clientY,
-              }*/,
+              pos,
               entry: file,
             });
           }}

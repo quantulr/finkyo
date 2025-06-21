@@ -1,11 +1,5 @@
-import { useNavigate, useParams } from "@solidjs/router";
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  Match,
-  Switch,
-} from "solid-js";
+import { useNavigate, useParams, useSearchParams } from "@solidjs/router";
+import { createMemo, createSignal, Match, Switch } from "solid-js";
 import request from "@/lib/request";
 import mime from "mime";
 import FileGrid from "@/components/FileGrid";
@@ -21,23 +15,16 @@ import FileTable from "@/components/FileTable";
 import ContextMenu from "@/components/ContextMenu";
 import BottomSheets from "@/components/BottomSheets";
 import { useQuery } from "@tanstack/solid-query";
-/* import { createOverlayScrollbars } from "overlayscrollbars-solid"; */
-import {
-  createColumnHelper,
-  createSolidTable,
-  getCoreRowModel,
-} from "@tanstack/solid-table";
 
 enum LayoutType {
   Table = "table",
   Grid = "grid",
 }
 
-const columnHelper = createColumnHelper<FileEntryItem>();
-
 const Files = () => {
   // route
   const params: { path?: string } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams<{ q?: string }>();
   const navigate = useNavigate();
   const query = useQuery(() => ({
     queryKey: [params.path ?? ""],
@@ -52,22 +39,14 @@ const Files = () => {
       () => params.path ?? "",
       (key) => request.get<never, BaseResponse<FileEntryItem[]>>(`/files/${key}`),
     );*/
-  const files = createMemo(() => query.data?.data);
+  const files = createMemo(() =>
+    query.data?.data.filter((entry) =>
+      entry.name.includes(searchParams.q ?? ""),
+    ),
+  );
   const images = createMemo(() =>
     files()?.filter((entry) => mime.getType(entry.name)?.startsWith("image/")),
   );
-  let fileTable: any;
-  createEffect(() => {
-    fileTable = createSolidTable({
-      data: files() ?? [],
-      columns: [
-        columnHelper.accessor("name", {
-          header: "文件名",
-        }),
-      ],
-      getCoreRowModel: getCoreRowModel(),
-    });
-  });
 
   // photo swipe
   const [openIndex, setOpenIndex] = createSignal<number | undefined>();
@@ -79,6 +58,11 @@ const Files = () => {
 
   // switch grid and table layout
   const [layout, setLayout] = createSignal<LayoutType>(LayoutType.Grid);
+
+  /* 搜索 */
+  const [showSearchField, setShowSearchField] = createSignal(false);
+  let searchFieldRef: HTMLInputElement | undefined;
+  /* 搜索 end */
 
   /*
   let scrollRef: HTMLDivElement | undefined;
@@ -103,6 +87,38 @@ const Files = () => {
     });
   });
 */
+
+  const onEntryClick = (entry: FileEntryItem) => {
+    if ((entry.entryType as string) === "Directory") {
+      navigate(
+        params.path
+          ? `/browse/${params.path}/${entry.name}`
+          : `/browse/${entry.name}`,
+      );
+    } else if (mime.getType(entry.name)?.startsWith("image")) {
+      const imageIndex = images()?.findIndex(
+        (image) => entry.name === image.name,
+      );
+      (imageIndex ?? -1) >= 0 && setOpenIndex(imageIndex);
+    } else if (
+      mime.getType(entry.name)?.startsWith("video") ||
+      mime.getType(entry.name)?.startsWith("audio")
+    ) {
+      const mediaPlayUrl = params.path
+        ? `/play/${params.path}/${entry.name}`
+        : `/play/${entry.name}`;
+      window.open(mediaPlayUrl);
+    } else if (
+      mime.getType(entry.name)?.startsWith("text") ||
+      mime.getType(entry.name)?.startsWith("application/pdf")
+    ) {
+      window.open(
+        params.path
+          ? `/file_link/${params.path}/${entry.name}`
+          : `/file_link/${entry.name}`,
+      );
+    }
+  };
   return (
     <>
       <ContextMenu />
@@ -118,20 +134,55 @@ const Files = () => {
           <div class={"right flex items-center"}>
             <button
               class={"cursor-pointer rounded-lg p-1 active:bg-blue-200"}
-              onClick={() => {
-                console.log(fileTable.getRowModel().rows);
-              }}
+              onClick={() => {}}
             >
               <IconSortDescending class={"size-6 text-blue-500"} />
             </button>
+            <input
+              ref={searchFieldRef}
+              value={searchParams.q ?? ""}
+              class={`${
+                showSearchField() || searchParams.q
+                  ? "w-64 border-2 px-2"
+                  : "w-0"
+              } h-8 rounded-lg border-blue-200 bg-white transition-all focus:outline-none`}
+              onKeyDown={(ev) => {
+                if (ev.key === "Enter") {
+                  setShowSearchField(false);
+                  const searchValue = (ev.target as HTMLInputElement).value;
+                  if (searchValue.trim() !== "") {
+                    setSearchParams({ q: searchValue.trim() });
+                    // navigate(
+                    //   params.path
+                    //     ? `?q=${searchValue.trim()}`
+                    //     : `?q=${searchValue.trim()}`,
+                    // );
+                  }
+                } else if (ev.key === "Escape") {
+                  setShowSearchField(false);
+                  // navigate(params.path ? `/browse/${params.path}` : `/browse`);
+                  setSearchParams({ q: undefined });
+                }
+              }}
+            />
             <button
-              class={"ml-2 cursor-pointer rounded-lg p-1 active:bg-blue-200"}
+              class={`cursor-pointer rounded-lg transition-all active:bg-blue-200 ${
+                showSearchField() || searchParams.q
+                  ? "size-0"
+                  : "ml-2 size-8 p-1"
+              }`}
               onClick={() => {
-                console.log(fileTable.getRowModel().rows);
+                setShowSearchField(true);
+                searchFieldRef?.focus();
               }}
             >
-              <IconSearch class={"size-6 text-blue-500"} />
+              <IconSearch
+                class={`text-blue-500 ${
+                  showSearchField() || searchParams.q ? "size-0" : "size-6"
+                }`}
+              />
             </button>
+
             <div
               class={
                 "ml-2 flex h-8 w-16 justify-between overflow-hidden rounded-lg border-2 border-blue-200"
@@ -168,47 +219,10 @@ const Files = () => {
               <div class={"p-4"}>
                 <Switch>
                   <Match when={layout() === LayoutType.Grid}>
-                    <FileGrid
-                      files={files}
-                      onEntryClick={(entry) => {
-                        if ((entry.entryType as string) === "Directory") {
-                          navigate(
-                            params.path
-                              ? `/browse/${params.path}/${entry.name}`
-                              : `/browse/${entry.name}`,
-                          );
-                        } else if (
-                          mime.getType(entry.name)?.startsWith("image")
-                        ) {
-                          const imageIndex = images()?.findIndex(
-                            (image) => entry.name === image.name,
-                          );
-                          (imageIndex ?? -1) >= 0 && setOpenIndex(imageIndex);
-                        } else if (
-                          mime.getType(entry.name)?.startsWith("video") ||
-                          mime.getType(entry.name)?.startsWith("audio")
-                        ) {
-                          const mediaPlayUrl = params.path
-                            ? `/play/${params.path}/${entry.name}`
-                            : `/play/${entry.name}`;
-                          window.open(mediaPlayUrl);
-                        } else if (
-                          mime.getType(entry.name)?.startsWith("text") ||
-                          mime
-                            .getType(entry.name)
-                            ?.startsWith("application/pdf")
-                        ) {
-                          window.open(
-                            params.path
-                              ? `/file_link/${params.path}/${entry.name}`
-                              : `/file_link/${entry.name}`,
-                          );
-                        }
-                      }}
-                    />
+                    <FileGrid files={files} onEntryClick={onEntryClick} />
                   </Match>
                   <Match when={layout() === LayoutType.Table}>
-                    <FileTable />
+                    <FileTable files={files} onEntryClick={onEntryClick} />
                   </Match>
                 </Switch>
               </div>
