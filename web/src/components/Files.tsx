@@ -30,11 +30,7 @@ import ContextMenu from "@/components/ContextMenu";
 import BottomSheets from "@/components/BottomSheets";
 import { useQuery } from "@tanstack/solid-query";
 import saved_position from "@/store/saved_position";
-
-enum LayoutType {
-  Table = "table",
-  Grid = "grid",
-}
+import layoutStore, { LayoutType } from "@/store/layout";
 
 const Files = () => {
   // route
@@ -57,16 +53,22 @@ const Files = () => {
     pushSavedPosition({
       path: `${location.pathname}${location.search}`,
       top: scrollRef?.scrollTop,
+      layout: layout(),
     });
   });
 
   createEffect(() => {
     const savedPosition = savedPositionList().get(
-      `${location.pathname}${location.search}`,
+      `${location.pathname}${location.search}-${layout()}`,
     );
+
     if (savedPosition && files()?.length) {
       scrollRef?.scrollTo({
         top: savedPosition.top,
+      });
+    } else {
+      scrollRef?.scrollTo({
+        top: 0,
       });
     }
   });
@@ -86,16 +88,17 @@ const Files = () => {
     files()?.filter((entry) => mime.getType(entry.name)?.startsWith("image/")),
   );
 
-  // photo swipe
+  /* photo swipe */
   const [openIndex, setOpenIndex] = createSignal<number | undefined>();
   createPhotoSwipe({
     images: images,
     openIndex: openIndex,
     onClose: () => setOpenIndex(undefined),
   });
+  /* end */
 
   // switch grid and table layout
-  const [layout, setLayout] = createSignal<LayoutType>(LayoutType.Grid);
+  const { layout, setLayout } = layoutStore;
 
   /* 搜索 */
   const [showSearchField, setShowSearchField] = createSignal(false);
@@ -214,6 +217,11 @@ const Files = () => {
             >
               <button
                 onClick={() => {
+                  pushSavedPosition({
+                    path: `${location.pathname}${location.search}`,
+                    top: scrollRef?.scrollTop,
+                    layout: layout(),
+                  });
                   setLayout(LayoutType.Grid);
                 }}
                 class={`flex h-full w-full cursor-pointer items-center justify-center transition-all hover:bg-blue-300 ${layout() === LayoutType.Grid ? "bg-blue-400" : ""}`}
@@ -223,6 +231,11 @@ const Files = () => {
               <span class={"w-[2px] bg-blue-200"}></span>
               <button
                 onClick={() => {
+                  pushSavedPosition({
+                    path: `${location.pathname}${location.search}`,
+                    top: scrollRef?.scrollTop,
+                    layout: layout(),
+                  });
                   setLayout(LayoutType.Table);
                 }}
                 class={`flex h-full w-full cursor-pointer items-center justify-center transition-all hover:bg-blue-300 ${layout() === LayoutType.Table ? "bg-blue-400" : ""}`}

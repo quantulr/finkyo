@@ -5,8 +5,18 @@ const createSavedPositionStore = () => {
     Map<string, SavedPositionItem>
   >(new Map());
 
-  const pushSavedPosition = ({ path, top }: { path: string; top?: number }) => {
-    setSavedPositionList((prev) => prev.set(path, { path, top }));
+  const pushSavedPosition = ({
+    path,
+    top,
+    layout,
+  }: {
+    path: string;
+    top?: number;
+    layout: LayoutType;
+  }) => {
+    setSavedPositionList((prev) =>
+      prev.set(`${path}-${layout}`, { path, top, layout }),
+    );
   };
   return {
     savedPositionList,
