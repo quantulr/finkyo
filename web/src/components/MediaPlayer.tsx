@@ -28,6 +28,18 @@ import {
 
 // dayjs.extend(duration);
 
+function formatDuration(seconds: number) {
+  // 确保秒数为非负数
+  const sec = Math.max(0, seconds);
+  // 计算分钟（向下取整）
+  const minutes = Math.floor(sec / 60);
+  // 计算剩余秒数（补零到两位数）
+  const remainingSeconds = Math.floor(sec % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${minutes}:${remainingSeconds}`;
+}
+
 const MediaPlayer = () => {
   const params: { uri: string } = useParams();
   const type = createMemo(() => mime.getType(params.uri));
@@ -87,6 +99,8 @@ const MediaPlayer = () => {
         muted: videoPlayerRef?.muted ?? true,
       }));
     }
+    /* 修改title */
+    document.title = `正在播放：${decodeURIComponent(params.uri.split("/").pop() ?? "")}`;
   });
   /* 切换媒体 end */
 
@@ -175,7 +189,7 @@ const MediaPlayer = () => {
           }
         >
           <div
-            class={`fixed bottom-24 left-0 z-50 max-h-[60dvh] overflow-auto rounded-lg bg-white transition-all ${showPlayList() ? "w-[80dvw]" : "invisible w-0 overflow-hidden"}`}
+            class={`fixed bottom-32 left-0 z-50 max-h-[60dvh] overflow-auto rounded-lg bg-white transition-all ${showPlayList() ? "w-[80dvw]" : "invisible w-0 overflow-hidden"}`}
             style={{
               height: showPlayList()
                 ? `${40 * mediaFiles().length + (mediaFiles().length - 1) * 2}px`
@@ -197,9 +211,9 @@ const MediaPlayer = () => {
                       <button
                         class={`flex h-10 w-full cursor-pointer items-center px-2 hover:bg-blue-100 active:bg-blue-200 ${decodeURIComponent(params.uri.split("/").pop() ?? "") === file.name ? "bg-blue-300" : ""}`}
                         onClick={() => {
-                          if (type()?.startsWith("audio")) {
+                          /*  if (type()?.startsWith("audio")) {
                             if (audioPlayerRef) audioPlayerRef.autoplay = true;
-                          }
+                          } */
                           navigate(
                             `/play/${path() ? `${path()}/` : ""}${file.name}`,
                           );
@@ -227,9 +241,14 @@ const MediaPlayer = () => {
                   ])}
             </ul>
           </div>
+          <p class={"flex items-center text-sm"}>
+            {formatDuration(playerState().currentTime)}
+            <span class={"mx-1"}>/</span>
+            {formatDuration(playerState().duration)}
+          </p>
           <div
             class={
-              "progress mx-auto h-2 w-full overflow-hidden rounded-full bg-red-100"
+              "progress mx-auto mt-2 h-2 w-full overflow-hidden rounded-full bg-red-100"
             }
             onClick={(ev) => {
               const rect = ev.currentTarget.getBoundingClientRect();
@@ -331,6 +350,12 @@ const MediaPlayer = () => {
             onPause={() => {
               setPlayerState((prev) => ({ ...prev, playing: false }));
             }}
+            onLoadedMetadata={(ev) => {
+              setPlayerState((prev) => ({
+                ...prev,
+                duration: ev.currentTarget.duration,
+              }));
+            }}
             onTimeUpdate={(ev) => {
               if (type()?.startsWith("video")) return;
               setPlayerState((prev) => ({
@@ -353,6 +378,12 @@ const MediaPlayer = () => {
             onPause={() => {
               setPlayerState((prev) => ({ ...prev, playing: false }));
             }}
+            onLoadedMetadata={(ev) => {
+              setPlayerState((prev) => ({
+                ...prev,
+                duration: ev.currentTarget.duration,
+              }));
+            }}
             onTimeUpdate={(ev) => {
               if (type()?.startsWith("audio")) return;
 
@@ -367,10 +398,10 @@ const MediaPlayer = () => {
               }));
             }}
             ref={videoPlayerRef}
-            class={"h-[100dvh] w-[100dvw]"}
+            class={`h-[100dvh] w-[100dvw]`}
             src={`/file_link/${params.uri}`}
-            autoplay={true}
-            muted={true}
+            /*           muted={false}
+            autoplay={false} */
             playsinline={true}
           />
         </Match>
