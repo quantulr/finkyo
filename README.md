@@ -4,7 +4,7 @@
 
 ### Serve a directory:
     finkyo ./
-### Use custom port.
+### Use custom port:
     finkyo ./ -p 8080
 
 ## Usage
