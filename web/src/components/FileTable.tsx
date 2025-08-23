@@ -18,8 +18,8 @@ const FileTable = ({
     <table class={"w-full border-separate border-spacing-x-4"}>
       <thead class={"hidden md:block"}>
         <tr>
-          <th class={"text-left"}>文件名</th>
-          <th class={"text-left"}>大小</th>
+          <th class={"text-left w-2/3 max-w-[200px]"}>文件名</th>
+          <th class={"text-left w-3/12"}>大小</th>
           <th class={"md:hidden"}></th>
         </tr>
       </thead>
