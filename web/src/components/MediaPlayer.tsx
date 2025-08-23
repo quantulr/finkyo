@@ -99,10 +99,15 @@ const MediaPlayer = () => {
         muted: videoPlayerRef?.muted ?? true,
       }));
     }
-    /* 修改title */
-    document.title = `正在播放：${decodeURIComponent(params.uri.split("/").pop() ?? "")}`;
   });
   /* 切换媒体 end */
+
+  /* 在网页标题中显示文件名 */
+  createEffect(() => {
+    const title = `${playerState().playing ? "正在播放" : "已暂停"}: ${decodeURIComponent(params.uri.split("/").pop() ?? "")}`;
+    document.title = title;
+  });
+  /* end */
 
   /* 切换播放状态 */
   const tooglePlay = () => {
@@ -217,6 +222,7 @@ const MediaPlayer = () => {
                           navigate(
                             `/play/${path() ? `${path()}/` : ""}${file.name}`,
                           );
+                          setShowPlayList(false);
                         }}
                       >
                         {mime.getType(file.name)?.startsWith("audio/") ? (
