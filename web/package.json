@@ -12,28 +12,28 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@tailwindcss/vite": "^4.1.11",
-    "@types/node": "^22.16.5",
-    "prettier": "^3.6.2",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/node": "^22.19.7",
+    "prettier": "^3.8.0",
     "prettier-plugin-tailwindcss": "^0.6.14",
-    "tailwindcss": "^4.1.11",
-    "typescript": "^5.8.3",
-    "vite": "^6.3.5",
-    "vite-plugin-solid": "^2.11.7"
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1",
+    "vite-plugin-solid": "^2.11.10"
   },
   "dependencies": {
     "@solid-devtools/overlay": "^0.33.5",
-    "@solidjs/router": "^0.15.3",
-    "@tabler/icons-solidjs": "^3.34.1",
-    "@tanstack/solid-query": "^5.83.0",
-    "axios": "^1.11.0",
+    "@solidjs/router": "^0.15.4",
+    "@tabler/icons-solidjs": "^3.36.1",
+    "@tanstack/solid-query": "^5.90.22",
+    "axios": "^1.13.2",
     "filesize": "^10.1.6",
     "flat-color-icons": "^1.1.0",
-    "mime": "^4.0.7",
-    "overlayscrollbars": "^2.11.4",
+    "mime": "^4.1.0",
+    "overlayscrollbars": "^2.13.0",
     "overlayscrollbars-solid": "^0.5.6",
     "photoswipe": "^5.4.4",
-    "solid-js": "^1.9.7"
+    "solid-js": "^1.9.10"
   },
-  "packageManager": "pnpm@10.12.1+sha512.f0dda8580f0ee9481c5c79a1d927b9164f2c478e90992ad268bbb2465a736984391d6333d2c327913578b2804af33474ca554ba29c04a8b13060a717675ae3ac"
+  "packageManager": "pnpm@10.20.0+sha512.cf9998222162dd85864d0a8102e7892e7ba4ceadebbf5a31f9c2fce48dfce317a9c53b9f6464d1ef9042cba2e02ae02a9f7c143a2b438cd93c91840f0192b9dd"
 }
