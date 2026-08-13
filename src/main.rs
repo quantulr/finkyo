@@ -1,12 +1,14 @@
 use crate::args::Args;
 use crate::state::AppState;
 use clap::Parser;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 mod args;
 mod handler;
+mod middleware;
 mod response;
 mod routes;
 mod services;
@@ -52,5 +54,10 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
         .await
         .unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }
