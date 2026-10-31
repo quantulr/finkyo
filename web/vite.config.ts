@@ -10,12 +10,12 @@ export default defineConfig({
     host: true,
     proxy: {
       "/files": {
-        target: "http://192.168.1.200:3030",
+        target: "http://localhost:3000",
         changeOrigin: true,
         // rewrite: path => path.replace(/^\/files/, '')
       },
       "/file_link": {
-        target: "http://192.168.1.200:3030",
+        target: "http://localhost:3000",
         changeOrigin: true,
         // rewrite: path => path.replace(/^\/files/, '')
       },
