@@ -74,9 +74,7 @@ const MediaPlayer = () => {
   const query = useQuery(() => ({
     queryKey: [path()],
     queryFn: ({ queryKey }) =>
-      request.get<never, BaseResponse<FileEntryItem[]>>(
-        filesUrl(queryKey[0]),
-      ),
+      request.get<never, BaseResponse<FileEntryItem[]>>(filesUrl(queryKey[0])),
   }));
 
   const mediaFiles = createMemo(() =>
@@ -103,7 +101,9 @@ const MediaPlayer = () => {
   }); // 播放器状态
   const [volume, setVolume] = createSignal(preferences.volume);
   const [muted, setMuted] = createSignal(preferences.muted);
-  const [playbackRate, setPlaybackRate] = createSignal(preferences.playbackRate);
+  const [playbackRate, setPlaybackRate] = createSignal(
+    preferences.playbackRate,
+  );
   const [repeatMode, setRepeatMode] = createSignal<RepeatMode>(
     preferences.repeatMode,
   );
@@ -627,9 +627,7 @@ const MediaPlayer = () => {
 
       <Show when={autoplayBlocked() && !playbackError()}>
         <button
-          class={
-            "absolute inset-0 z-20 flex items-center justify-center"
-          }
+          class={"absolute inset-0 z-20 flex items-center justify-center"}
           aria-label="播放"
           onClick={(ev) => {
             ev.stopPropagation();
@@ -674,14 +672,14 @@ const MediaPlayer = () => {
         >
           <div
             ref={playListRef}
-            class={`absolute bottom-[calc(100%+8px)] left-0 z-50 max-h-[50dvh] w-full overflow-auto rounded-xl bg-white text-gray-900 shadow-xl transition-all duration-200 ${showPlayList() ? "visible opacity-100" : "invisible opacity-0"}`}
+            class={`absolute bottom-[calc(100%+8px)] left-0 z-50 max-h-[50dvh] w-full overflow-auto overscroll-contain rounded-2xl border border-white/10 bg-black/55 text-white shadow-2xl backdrop-blur-md transition-all duration-200 ${showPlayList() ? "visible opacity-100" : "invisible opacity-0"}`}
           >
             {mediaFiles().length === 0 ? (
-              <p class={"p-4 text-sm text-gray-500"}>没有可播放的文件</p>
+              <p class={"p-4 text-sm text-white/60"}>没有可播放的文件</p>
             ) : (
               <ul>
                 {mediaFiles().map((file) => (
-                  <li class={"border-t border-gray-100 first:border-t-0"}>
+                  <li class={"border-t border-white/10 first:border-t-0"}>
                     <button
                       data-current={
                         currentName() === file.name ? "true" : undefined
@@ -689,7 +687,7 @@ const MediaPlayer = () => {
                       aria-current={
                         currentName() === file.name ? "true" : undefined
                       }
-                      class={`flex h-10 w-full cursor-pointer items-center px-3 text-left transition-colors ${currentName() === file.name ? "bg-blue-100 font-medium" : "hover:bg-blue-50 active:bg-blue-100"}`}
+                      class={`flex h-10 w-full cursor-pointer items-center px-3 text-left transition-colors ${currentName() === file.name ? "bg-white/15 font-medium text-white" : "text-white/85 hover:bg-white/10 active:bg-white/15"}`}
                       onClick={(ev) => {
                         ev.stopPropagation();
                         saveCurrentProgress();
@@ -698,10 +696,12 @@ const MediaPlayer = () => {
                       }}
                     >
                       {mime.getType(file.name)?.startsWith("audio/") ? (
-                        <IconMusic class={"size-5 shrink-0 text-blue-500"} />
+                        <IconMusic
+                          class={`size-5 shrink-0 ${currentName() === file.name ? "text-blue-400" : "text-white/60"}`}
+                        />
                       ) : (
                         <IconVideoFilled
-                          class={"size-5 shrink-0 text-blue-500"}
+                          class={`size-5 shrink-0 ${currentName() === file.name ? "text-blue-400" : "text-white/60"}`}
                         />
                       )}
                       <span class={"ml-2 truncate"}>{file.name}</span>
@@ -726,9 +726,7 @@ const MediaPlayer = () => {
               onInput={(ev) => seekTo(Number(ev.currentTarget.value))}
               class={"h-1.5 flex-1 cursor-pointer accent-blue-500"}
             />
-            <span class={"w-10"}>
-              {formatDuration(playerState().duration)}
-            </span>
+            <span class={"w-10"}>{formatDuration(playerState().duration)}</span>
           </div>
 
           <div class="mt-2 flex items-center justify-between">
