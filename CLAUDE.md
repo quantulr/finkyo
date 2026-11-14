@@ -204,6 +204,6 @@ web/
 
 ## 发布与版本
 
-- 版本号以 `Cargo.toml` 为准（当前 `0.7.0`），`web/package.json` 保持同步。
+- 版本号以 `Cargo.toml` 为准（当前 `0.8.0`），`web/package.json` 保持同步。
 - 需要提交前先确认 `cargo fmt --check`、`clippy`、`cargo test`、`pnpm typecheck`、`pnpm build` 全部通过。
-- 发布 tag 使用 `v*`（如 `v0.7.0`），四个发布工作流会分别产出 Linux amd64/aarch64、macOS aarch64、Windows amd64 二进制。
+- 发布 tag 使用 `v*`（如 `v0.8.0`），四个发布工作流会分别产出 Linux amd64/aarch64、macOS aarch64、Windows amd64 二进制。
