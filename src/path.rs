@@ -6,6 +6,12 @@ use crate::state::AppState;
 /// A path is safe when every component is a plain name (or `.`): no
 /// absolute paths, no `..`, no drive prefixes.
 pub fn is_safe_relative(path: &str) -> bool {
+    let bytes = path.as_bytes();
+    // Windows drive prefixes are rejected on every platform so behavior
+    // does not depend on the host OS.
+    if bytes.len() >= 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic() {
+        return false;
+    }
     Path::new(path)
         .components()
         .all(|component| matches!(component, Component::Normal(_) | Component::CurDir))
@@ -70,7 +76,14 @@ mod tests {
 
     #[test]
     fn rejects_traversal_and_absolute_paths() {
-        for path in ["..", "../etc", "a/../../b", "/etc/passwd", "C:\\Windows"] {
+        for path in [
+            "..",
+            "../etc",
+            "a/../../b",
+            "/etc/passwd",
+            "C:\\Windows",
+            "C:/Windows",
+        ] {
             assert!(!is_safe_relative(path), "{path} should be rejected");
         }
         for path in ["", ".", "docs", "a/b", "a/./b", "中文/文件"] {
