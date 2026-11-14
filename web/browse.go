@@ -28,8 +28,8 @@ type browseState struct {
 	desc      bool
 	mode      int
 	selected  int
-	list      ui.ListState
-	grid      ui.GridState
+	list      *ui.ListState
+	grid      *ui.GridState
 	thumbs    map[string]*ui.Bitmap
 	thumbBusy map[string]bool
 }
@@ -66,8 +66,10 @@ func (a *app) loadBrowse(p string) {
 	b.parent = nil
 	b.selected = -1
 	b.query = ""
-	b.list = ui.ListState{}
-	b.grid = ui.GridState{}
+	// A fresh state per directory: the page leaving the screen keeps its
+	// own while the router animates it out.
+	b.list = &ui.ListState{}
+	b.grid = &ui.GridState{}
 
 	go func() {
 		result, err := fetchList(p)
@@ -183,6 +185,9 @@ func (a *app) browseContent(c *ui.Context) {
 
 func (a *app) browseTable(c *ui.Context, items []Entry) {
 	b := &a.browse
+	if b.list == nil {
+		b.list = &ui.ListState{}
+	}
 	theme := c.Theme()
 	width, _ := c.Size()
 
@@ -201,18 +206,29 @@ func (a *app) browseTable(c *ui.Context, items []Entry) {
 		columns = append(columns, ui.TableColumn{Title: "修改时间", Width: 150, Align: ui.End})
 	}
 
-	table := ui.Table(c, &b.list, columns, len(items), func(row, col int) {
+	opened := -1
+	table := ui.Table(c, b.list, columns, len(items), func(row, col int) {
 		entry := items[row]
+		cell := ui.Box(c).FillWidth()
 		switch kinds[col] {
 		case 0:
-			ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-				ui.Icon(c, entryIcon(entry)).FontSize(16).TextColor(theme.TextMuted)
-				ui.Text(c, entry.Name).SingleLine()
+			cell.Children(func() {
+				ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+					ui.Icon(c, entryIcon(entry)).FontSize(16).TextColor(theme.TextMuted)
+					ui.Text(c, entry.Name).SingleLine()
+				})
 			})
 		case 1:
-			ui.Text(c, humanSize(entry.Size)).TextColor(theme.TextMuted)
+			cell.Children(func() {
+				ui.Text(c, humanSize(entry.Size)).TextColor(theme.TextMuted)
+			})
 		case 2:
-			ui.Text(c, formatTime(entry.Modified)).TextColor(theme.TextMuted)
+			cell.Children(func() {
+				ui.Text(c, formatTime(entry.Modified)).TextColor(theme.TextMuted)
+			})
+		}
+		if cell.RowClicked() {
+			opened = row
 		}
 	}).Grow(1)
 
@@ -220,6 +236,10 @@ func (a *app) browseTable(c *ui.Context, items []Entry) {
 		a.entryMenu(menu, items)
 	})
 
+	if opened >= 0 {
+		a.openEntry(b.path, items[opened])
+		return
+	}
 	if table.Submitted() && b.selected >= 0 && b.selected < len(items) {
 		a.openEntry(b.path, items[b.selected])
 	}
@@ -227,12 +247,15 @@ func (a *app) browseTable(c *ui.Context, items []Entry) {
 
 func (a *app) browseGrid(c *ui.Context, items []Entry) {
 	b := &a.browse
+	if b.grid == nil {
+		b.grid = &ui.GridState{}
+	}
 
 	b.grid.Key = func(item int) any { return items[item].Name }
 	b.grid.Label = func(item int) string { return items[item].Name }
 	b.grid.Selected = &b.selected
 
-	grid := ui.GridView(c, &b.grid, len(items), 140, 140, func(item int) {
+	grid := ui.GridView(c, b.grid, len(items), 140, 140, func(item int) {
 		a.gridItem(c, items[item])
 	}).Grow(1)
 
@@ -249,7 +272,9 @@ func (a *app) gridItem(c *ui.Context, entry Entry) {
 	b := &a.browse
 	theme := c.Theme()
 
-	ui.Column(c).Gap(4).Children(func() {
+	ui.Column(c).Gap(4).OnClick(func() {
+		a.openEntry(b.path, entry)
+	}).Children(func() {
 		ui.Box(c).Height(100).FillWidth().Radius(8).Background(theme.Surface).Children(func() {
 			if isImageName(entry.Name) {
 				full := joinPath(b.path, entry.Name)

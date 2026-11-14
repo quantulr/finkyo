@@ -120,7 +120,8 @@ web/
   - 音频用 `audio.OpenStream(io.ReadSeeker)`，解码器由 `api.go` 的 blank import 注册（`audio/mp3`、`audio/vorbis`、`audio/flac`、`audio/aac`、`audio/mp4`，WAV 内置）；新增格式时补 import，否则运行时报“不支持”。
   - `video.VideoPlayer` / `audio.Player` 的所有方法都必须在主线程（view 或 `win.Update` 内）调用；进度更新靠 `c.After` 在播放中轮询，不要用后台 ticker。
   - 播放结束只处理一次（`handledEnd`），随后按循环模式或播放列表顺序切歌。
-- **列表状态**：切换目录时重置 `ui.ListState` / `ui.GridState`；`/api/list` 不排序，前端由 `visibleEntries` 统一“目录优先 + 当前排序”。
+- **列表状态**：`browseState.list` / `grid` 保存的是指针；切换目录时**新建** `&ui.ListState{}` / `&ui.GridState{}`，不要把正在使用的状态清零——路由过渡期间旧页面仍会用原状态重排，清零会触发 mygo `layoutList` 空指针 panic。`/api/list` 不排序，前端由 `visibleEntries` 统一“目录优先 + 当前排序”。
+- **打开条目**：表格单元格用 `RowClicked()` 响应当前行的单击（整行任意列都可点）；网格项在内容根节点上用 `OnClick`；`Submitted()`（双击 / Enter）仅作补充。点击目录 / 面包屑后由路由切换页面。
 - **缩略图**：网格视图调用 `/api/thumb` 并缓存在 `browse.thumbs`；不要为每个网格项下载原图再解码。
 - **响应式**：窄屏策略集中在 view 中——工具栏 `Wrap()`（<760）、音量滑块与 Spacer（<640）、表格列（<480 隐藏大小，<720 隐藏修改时间）、播放列表（<900 隐藏）。新增控件时保持同一套阈值。
 - **图标**：使用 `icons.go` 里的 `svg(body)` + `iconButton`，不要引入图片资源。
