@@ -1,11 +1,13 @@
-# Build the mygo UI to WebAssembly first: rust-embed reads web/dist.
-FROM golang:1.27 AS web
+# Build the SolidJS UI first: rust-embed reads web/dist.
+FROM node:24-alpine AS web
+
+RUN npm install -g pnpm@12.16.1
 
 WORKDIR /src/web
-COPY web/go.mod web/go.sum ./
-RUN go mod download
+COPY web/package.json web/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY web/ ./
-RUN go run ./cmd/build
+RUN pnpm typecheck && pnpm build
 
 FROM rust:1-slim-bookworm AS server
 

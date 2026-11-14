@@ -7,15 +7,15 @@ use tower_http::compression::predicate::{NotForContentType, SizeAbove};
 use tower_http::compression::{CompressionLayer, Predicate};
 use tower_http::set_header::SetResponseHeaderLayer;
 
+use crate::api;
 use crate::assets;
-use crate::files;
 use crate::state::AppState;
 
 pub fn routes(state: Arc<AppState>, compress: bool) -> Router {
     let app = Router::new()
-        .route("/api/list", get(files::list))
-        .route("/api/raw", get(files::raw))
-        .route("/api/thumb", get(files::thumb))
+        .route("/api/list", get(api::list))
+        .route("/api/raw", get(api::raw))
+        .route("/api/thumb", get(api::thumb))
         .route("/healthz", get(|| async { "ok" }))
         .fallback(assets::serve)
         .layer(SetResponseHeaderLayer::overriding(

@@ -1,5 +1,7 @@
 /target
 /web/dist
+/web/node_modules
+/web/.vite
 
 # Logs
 *.log
@@ -9,3 +11,4 @@
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db

@@ -1,40 +1,26 @@
 <!doctype html>
 <html lang="zh-CN">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      content="#f5f5f7"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#000000"
+      media="(prefers-color-scheme: dark)"
+    />
     <title>finkyo</title>
-    <style>
-      html,
-      body {
-        margin: 0;
-        height: 100%;
-        overflow: hidden;
-        background: #ffffff;
-      }
-      @media (prefers-color-scheme: dark) {
-        html,
-        body {
-          background: #1e1e1e;
-        }
-      }
-      #mygo {
-        position: fixed;
-        inset: 0;
-      }
-    </style>
   </head>
   <body>
-    <div id="mygo"></div>
-    <script src="wasm_exec.js?v={{VERSION}}"></script>
-    <script>
-      const go = new Go();
-      WebAssembly.instantiateStreaming(fetch("app.wasm?v={{VERSION}}"), go.importObject)
-        .then((result) => go.run(result.instance))
-        .catch((error) => {
-          document.body.textContent = "无法加载 finkyo: " + error;
-        });
-    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

@@ -4,10 +4,10 @@ use clap::Parser;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
+mod api;
 mod args;
 mod assets;
 mod error;
-mod files;
 mod path;
 mod routes;
 mod state;
