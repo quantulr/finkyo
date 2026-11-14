@@ -116,6 +116,7 @@ web/src/
 - **日志**：`RUST_LOG` 生效（`EnvFilter`）；`/assets/*` 与 `/healthz` 只在 debug 级别记录。
 - **前端 URL**：`@solidjs/router` 的 `useParams` 返回的是 URL 中的**原始编码路径**（不会自动解码）。使用前必须先经 `lib/path.ts` 的 `decodePath` 解码，再交给 `encodePath` / `filesUrl` / `fileLinkUrl` / `browseUrl` / `playUrl` 编码拼接；不要把 `params.path` / `params.uri` 直接用于接口地址或显示。
 - **目录判断**：前端统一使用 `isDirectoryEntry`（同时覆盖 `Directory` 与 `SymlinkDir`）。
+- **播放器**：`MediaPlayer` 中操作当前媒体元素时必须使用 `activePlayer()`（按 `type()` 选择 `videoPlayerRef` / `audioPlayerRef`）。不要使用 `videoPlayerRef ?? audioPlayerRef` —— 切换音视频后旧引用仍指向已卸载元素。音量、倍速、循环模式与播放进度存于 `lib/playerPreferences.ts`（localStorage），读写均需包 try/catch；自动播放被拦截时先静音重试，再显示中心播放按钮。
 - **前端技术栈**：SolidJS + Solid Router + TanStack Query + Tailwind CSS v4 + Vite；图标使用 `@tabler/icons-solidjs`。
 - `web/README.md` 是 SolidJS 模板自带的说明文档，不是本项目的文档；项目文档以根目录 `README.md` 为准。
 - 版本号：`Cargo.toml` 与 `web/package.json` 保持一致（当前 0.5.4）。
