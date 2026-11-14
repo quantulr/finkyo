@@ -1,25 +1,18 @@
-FROM node:24-alpine AS web
+# Build the mygo UI to WebAssembly first: rust-embed reads web/dist.
+FROM golang:1.27 AS web
 
-WORKDIR /app/web
-RUN npm install -g pnpm@12
-
-COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
-
+WORKDIR /src/web
+COPY web/go.mod web/go.sum ./
+RUN go mod download
 COPY web/ ./
-RUN pnpm build
+RUN go run ./cmd/build
 
+FROM rust:1-slim-bookworm AS server
 
-FROM rust:1-slim AS builder
-
-WORKDIR /app
-
-COPY Cargo.toml Cargo.lock ./
-COPY src ./src
-COPY --from=web /app/web/dist ./web/dist
-
+WORKDIR /src
+COPY . .
+COPY --from=web /src/web/dist ./web/dist
 RUN cargo build --release
-
 
 FROM debian:bookworm-slim
 
@@ -27,9 +20,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/target/release/finkyo /usr/local/bin/finkyo
+COPY --from=server /src/target/release/finkyo /usr/local/bin/finkyo
 
 EXPOSE 3000
-
 ENTRYPOINT ["finkyo"]
 CMD ["/data"]

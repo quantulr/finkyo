@@ -1,19 +1,19 @@
-use crate::args::Args;
-use crate::state::AppState;
-use clap::Parser;
-use std::net::SocketAddr;
 use std::sync::Arc;
+
+use clap::Parser;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 mod args;
-mod handler;
-mod middleware;
-mod response;
+mod assets;
+mod error;
+mod files;
+mod path;
 mod routes;
-mod services;
 mod state;
-mod utils;
+
+use args::Args;
+use state::AppState;
 
 #[tokio::main]
 async fn main() {
@@ -47,18 +47,17 @@ async fn main() {
         }
     }
 
-    let app_state = AppState::new(root, args.hidden);
-    let app = routes::routes(Arc::new(app_state), args.compress);
+    let state = Arc::new(AppState::new(root, args.hidden));
+    let app = routes::routes(Arc::clone(&state), args.compress);
 
     if args.host == "0.0.0.0" || args.host == "::" {
         match if_addrs::get_if_addrs() {
             Ok(interfaces) => {
-                for ip in interfaces
-                    .into_iter()
-                    .map(|iface| iface.ip())
-                    .filter(|ip| ip.is_ipv4())
-                {
-                    tracing::info!("server running at http://{}:{}", ip, args.port);
+                for interface in interfaces {
+                    let ip = interface.ip();
+                    if ip.is_ipv4() {
+                        tracing::info!("server running at http://{}:{}", ip, args.port);
+                    }
                 }
             }
             Err(err) => tracing::warn!(%err, "failed to list network interfaces"),
@@ -67,30 +66,25 @@ async fn main() {
         tracing::info!("server running at http://{}:{}", args.host, args.port);
     }
 
-    let addr = format!("{}:{}", args.host, args.port);
-    let listener = match tokio::net::TcpListener::bind(&addr).await {
+    let address = format!("{}:{}", args.host, args.port);
+    let listener = match tokio::net::TcpListener::bind(&address).await {
         Ok(listener) => listener,
         Err(err) => {
-            tracing::error!(%addr, %err, "failed to bind address");
+            tracing::error!(%address, %err, "failed to bind address");
             std::process::exit(1);
         }
     };
 
-    if let Err(err) = axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .with_graceful_shutdown(shutdown_signal())
-    .await
+    if let Err(err) = axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
     {
-        tracing::error!(%err, "server stopped with an error");
+        tracing::error!(%err, "server error");
     }
 }
 
 async fn shutdown_signal() {
     if let Err(err) = tokio::signal::ctrl_c().await {
-        tracing::error!(%err, "failed to listen for Ctrl+C");
-        return;
+        tracing::error!(%err, "failed to listen for shutdown signal");
     }
-    tracing::info!("shutting down");
 }

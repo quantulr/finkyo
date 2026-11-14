@@ -12,35 +12,21 @@ jobs:
   check:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [24]
-
     steps:
       - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-go@v5
         with:
-          version: 12
+          go-version-file: web/go.mod
+          cache-dependency-path: web/go.sum
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v7
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-          cache-dependency-path: web/pnpm-lock.yaml
-
-      - name: Install web dependencies
+      - name: Vet web
         working-directory: web
-        run: pnpm install --frozen-lockfile
-
-      - name: Typecheck web
-        working-directory: web
-        run: pnpm typecheck
+        run: GOOS=js GOARCH=wasm go vet ./...
 
       - name: Build web
         working-directory: web
-        run: pnpm build
+        run: go run ./cmd/build
 
       - uses: dtolnay/rust-toolchain@stable
         with:

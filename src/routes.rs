@@ -1,43 +1,37 @@
-use crate::handler::web::static_handler;
-use crate::middleware::logger::access_log;
-use crate::state::AppState;
-use axum::http::{header, HeaderValue, StatusCode};
-use axum::routing::get;
-use axum::{middleware, Json, Router};
-use serde_json::json;
 use std::sync::Arc;
-use tower_http::compression::predicate::{NotForContentType, Predicate, SizeAbove};
-use tower_http::compression::CompressionLayer;
+
+use axum::Router;
+use axum::http::{HeaderValue, header};
+use axum::routing::get;
+use tower_http::compression::predicate::{NotForContentType, SizeAbove};
+use tower_http::compression::{CompressionLayer, Predicate};
 use tower_http::set_header::SetResponseHeaderLayer;
 
-mod files;
-
-const COMPRESSION_MIN_SIZE: u16 = 1024;
+use crate::assets;
+use crate::files;
+use crate::state::AppState;
 
 pub fn routes(state: Arc<AppState>, compress: bool) -> Router {
-    let mut router = Router::new()
-        .merge(files::routes(state))
-        .route("/healthz", get(healthz))
-        .fallback(static_handler)
-        .layer(SetResponseHeaderLayer::if_not_present(
+    let app = Router::new()
+        .route("/api/list", get(files::list))
+        .route("/api/raw", get(files::raw))
+        .route("/api/thumb", get(files::thumb))
+        .route("/healthz", get(|| async { "ok" }))
+        .fallback(assets::serve)
+        .layer(SetResponseHeaderLayer::overriding(
             header::X_CONTENT_TYPE_OPTIONS,
             HeaderValue::from_static("nosniff"),
         ))
-        .layer(SetResponseHeaderLayer::if_not_present(
+        .layer(SetResponseHeaderLayer::overriding(
             header::REFERRER_POLICY,
             HeaderValue::from_static("no-referrer"),
-        ));
+        ))
+        .with_state(state);
 
     if compress {
-        router = router
-            .layer(CompressionLayer::new().compress_when(
-                SizeAbove::new(COMPRESSION_MIN_SIZE).and(NotForContentType::IMAGES),
-            ));
+        let predicate = SizeAbove::new(1024).and(NotForContentType::IMAGES);
+        app.layer(CompressionLayer::new().gzip(true).compress_when(predicate))
+    } else {
+        app
     }
-
-    router.layer(middleware::from_fn(access_log))
-}
-
-async fn healthz() -> impl axum::response::IntoResponse {
-    (StatusCode::OK, Json(json!({ "status": "ok" })))
 }

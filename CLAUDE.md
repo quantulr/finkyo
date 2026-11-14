@@ -4,18 +4,17 @@
 
 ## 项目概览
 
-finkyo 是一个单二进制的自托管文件服务器：Rust（Axum 0.8 + Tokio）提供后端 API，SolidJS 前端在编译期通过 `rust-embed` 嵌入到 `web/dist`，因此发布物只有一个可执行文件，无需额外部署静态资源。
+finkyo 是一个单二进制的自托管文件服务器。后端是 Rust（Axum 0.8 + Tokio）；Web UI 用 Go 编写，基于 [egoist/mygo](https://github.com/egoist/mygo) 的原生 UI，编译为 WebAssembly 后放入 `web/dist`，由 `rust-embed` 在编译期嵌入可执行文件。浏览器里没有 HTML 组件或前端框架，整个界面由 mygo 在 `<canvas>` 上绘制。
 
 ## 常用命令
 
 ### 构建（注意顺序）
 
-`rust-embed` 在编译期读取 `web/dist`，必须**先构建前端**，否则 `cargo build` 会因目录/文件不存在而失败：
+`rust-embed` 在编译期读取 `web/dist`，必须**先构建 Web UI**，否则 `cargo build` 会因目录/文件不存在而失败：
 
 ```bash
 cd web
-pnpm install
-pnpm build
+go run ./cmd/build     # GOOS=js GOARCH=wasm 构建 dist/{app.wasm,wasm_exec.js,index.html}
 cd ..
 cargo build --release
 ```
@@ -24,17 +23,13 @@ cargo build --release
 
 ### 开发
 
-```bash
-# 终端 1：后端，监听 0.0.0.0:3000，根目录为当前目录
-cargo run -- ./
+Web UI 没有热更新；改 Go 代码后重新执行 `cd web && go run ./cmd/build`，再启动/重启后端：
 
-# 终端 2：前端 Vite，http://localhost:3030
-cd web
-pnpm install
-pnpm dev
+```bash
+cargo run -- ./
 ```
 
-Vite 将 `/files` 与 `/file_link` 代理到 `http://localhost:3000`（见 `web/vite.config.ts`）。
+页面路由使用 URL fragment（`#/browse/...`），刷新页面仍停留在当前路由。
 
 ### 检查与测试
 
@@ -42,81 +37,94 @@ Vite 将 `/files` 与 `/file_link` 代理到 `http://localhost:3000`（见 `web/
 cargo fmt --all -- --check
 cargo clippy --all-targets -- -D warnings
 cargo test
-cd web && pnpm typecheck
-cd web && pnpm fmt
+
+cd web
+GOOS=js GOARCH=wasm go vet ./...
+gofmt -l .
 ```
 
-- Rust 单元测试覆盖路径校验、隐藏路径判断、图片扩展名判断、危险 MIME 判断等。
-- CI（`.github/workflows/ci.yml`）在 push 到 `main` 和 PR 时执行上述全部检查。
-- 发布工作流（`.github/workflows/build-*.yml`）仅在推送 `v*` tag 时触发，构建 4 个平台的二进制并上传到 Release。
+- Go 代码依赖 `syscall/js`，**只能在 js/wasm 下编译**。宿主机直接 `go build ./...` 或 IDE 报 `syscall/js` 相关错误是预期行为，不要为此改代码。
+- Rust 单元测试覆盖路径安全（遍历 / 绝对路径 / 隐藏路径 / 父路径）与文件下载相关逻辑。
+- CI（`.github/workflows/ci.yml`）在 push 到 `main` 和 PR 时执行上述检查；发布工作流（`build-*.yml`）仅在推送 `v*` tag 时构建 4 个平台的二进制。
 
 ## 架构
 
 请求流：
 
 ```
-main.rs → routes::routes (healthz / 安全响应头 / 可选压缩 / access_log)
-        ├─ routes/files.rs → handler/files.rs → services/files_service.rs
+main.rs → routes::routes（安全响应头 / 可选压缩）
+        ├─ GET /api/list    → files::list
+        ├─ GET /api/raw     → files::raw（ServeFile，支持 Range）
+        ├─ GET /api/thumb   → files::thumb（服务端缩略图 + 缓存）
         ├─ GET /healthz
-        └─ fallback: handler/web.rs (内嵌前端 + SPA fallback)
+        └─ fallback: assets::serve（内嵌 Web UI，未匹配路径回退 index.html）
+
+浏览器 → index.html → wasm_exec.js + app.wasm（mygo）
+      → ui.NewRouter（#/、#/browse/{path...}、#/view/{path...}、#/play/{path...}）
+      → fetch /api/list、/api/raw、/api/thumb
 ```
 
 ### 后端目录
 
 ```
 src/
-├── main.rs                    # 入口：参数、日志、canonicalize 根目录、绑定、优雅关闭
-├── args.rs                    # clap 参数：path / -p / --host / -c / --hidden
-├── routes.rs                  # 路由装配、安全头、可选压缩、健康检查
-├── routes/files.rs            # /files/、/files/{*path}、/file_link/{*path}
-├── handler/
-│   ├── files.rs               # 目录列表、文件内容（ServeFile）、强制下载
-│   └── web.rs                 # rust-embed 静态资源、缓存头、SPA fallback
-├── services/files_service.rs  # 读取目录、平台文件类型、排序、图片尺寸并发读取
-├── response.rs                # BaseResponse<T>
-├── response/
-│   ├── error.rs               # ApiError 与统一错误 JSON
-│   └── files.rs               # EntryItem / EntryType / EntryMetadata
-├── state.rs                   # AppState：根目录、隐藏开关、图片尺寸缓存
-├── middleware/logger.rs       # gin 风格访问日志
-└── utils/path.rs              # 路径安全校验与根目录解析
+├── main.rs     # 入口：参数、tracing、canonicalize 根目录、绑定、优雅关闭
+├── args.rs     # clap 参数：path / -p / --host / -c / --hidden
+├── routes.rs   # 路由装配、nosniff / no-referrer、可选 gzip 压缩
+├── files.rs    # list / raw / thumb 三个 handler，缩略图渲染，强制附件逻辑
+├── assets.rs   # rust-embed 静态资源、Content-Type、缓存头
+├── state.rs    # AppState：根目录、隐藏开关、缩略图并发信号量与缓存
+├── path.rs     # 路径安全校验、隐藏路径判断、父路径、缩略图缓存键
+└── error.rs    # ApiError：{ "error": "..." } 与对应状态码
 ```
 
-### 前端目录
+### Web UI 目录
 
 ```
-web/src/
-├── index.tsx / App.tsx        # 入口：QueryClientProvider + Router（devtools 仅 DEV 加载）
-├── routes.tsx                 # / → /browse；/browse/*path；/play/*uri
-├── components/                # Home、Files、FileGrid、FileTable、MediaPlayer 等
-├── hooks/createPhotoSwipe.ts  # 图片灯箱
-├── lib/
-│   ├── path.ts                # URL 路径编码与拼接（必须使用）
-│   ├── entries.ts             # 目录 / 符号链接目录判断
-│   ├── fileActions.ts         # 打开 / 下载 / 复制链接
-│   └── request.ts             # axios 实例，响应拦截器直接返回 data
-├── store/                     # 布局、上下文菜单、滚动位置
-├── types/                     # 全局类型声明
-└── index.css
+web/
+├── main.go          # mygo.App、NewWindow、ui.View(application.view)
+├── app.go           # app 状态、路由表、路由切换清理、打开条目的分发
+├── api.go           # Entry 类型、siteOrigin、URL 构造、fetch/JSON 辅助、音频解码器注册
+├── browse.go        # 目录页：工具栏、面包屑、表格/网格、排序过滤、缩略图加载
+├── viewer.go        # 图片查看页
+├── player.go        # 视频/音频播放页、播放列表、控制条
+├── icons.go         # 内联 SVG 图标
+├── index.html       # wasm 启动页，{{VERSION}} 由构建脚本替换
+├── go.mod           # Go 1.27.4；mygo v0.9.0
+└── cmd/build/main.go# 构建 dist：wasm、wasm_exec.js、带版本号的 index.html
 ```
 
 ## 约定与注意事项
 
-- **路径安全**：任何由请求路径派生出的文件系统访问都必须经过 `utils::path::resolve_under_root`，不要直接 `root.join(user_path)`。该函数拒绝绝对路径、`..`、Windows 盘符，并校验 canonicalize 后的路径仍在根目录内（符号链接同样适用）。
+### 后端
+
+- **路径安全**：任何由请求路径派生出的文件系统访问都必须经过 `path::resolve_under_root`，不要直接 `root.join(user_path)`。该函数拒绝绝对路径、`..`、Windows 盘符，默认拒绝隐藏路径，并校验 canonicalize 后的路径仍在根目录内（符号链接同样适用）。
 - **根目录**：`AppState.root` 在启动时已 canonicalize；`resolve_under_root` 依赖这一点。
-- **隐藏文件**：默认过滤以 `.` 开头的条目；`--hidden` 开启后，`read_dir` 与 `file_link` 都允许访问。
-- **统一错误**：handler 返回 `Result<_, ApiError>`，错误体为 `{ "message": "...", "data": null }`。新增 API 请复用 `ApiError`，不要直接返回纯文本。
-- **API 响应**：成功响应统一为 `BaseResponse<T> { message, data }`；JSON 字段使用 camelCase（`#[serde(rename_all = "camelCase")]`），前端类型见 `web/src/types/`。
-- **新增 API**：在 `src/routes/` 下新建模块并在 `src/routes.rs` 中 `merge`；未匹配路径由 `static_handler` 兜底返回 `index.html`（前端 SPA 路由依赖此行为），但 `/assets/` 下缺失的文件会返回 404。
-- **图片尺寸**：目录列表仅对图片文件读取宽高，使用 `spawn_blocking` 且并发上限为 8，并按 `(路径, 大小, 修改时间)` 缓存；修改这段逻辑时注意不要阻塞 async worker。
-- **平台差异**：Windows 的 `classify` 先判断 `is_symlink_dir` / `is_symlink_file`，再判断 `is_dir` / `is_file`；Unix 分支只有 `is_symlink`。修改文件类型判断时需同步两个 `#[cfg]` 实现。
-- **文件下载**：`text/html`、`application/xhtml+xml`、`image/svg+xml` 会附加 `Content-Disposition: attachment`，避免同源脚本执行；新增可执行内容类型时请同步 `should_force_download`。
-- **静态资源**：`assets/*` 使用一年 immutable 缓存，`index.html` 使用 `no-cache`；Vite 产物文件名带 hash，可直接长缓存。
-- **压缩**：`-c` 通过 `CompressionLayer` 启用，仅压缩大于 1 KiB 且非图片的响应。
-- **日志**：`RUST_LOG` 生效（`EnvFilter`）；`/assets/*` 与 `/healthz` 只在 debug 级别记录。
-- **前端 URL**：`@solidjs/router` 的 `useParams` 返回的是 URL 中的**原始编码路径**（不会自动解码）。使用前必须先经 `lib/path.ts` 的 `decodePath` 解码，再交给 `encodePath` / `filesUrl` / `fileLinkUrl` / `browseUrl` / `playUrl` 编码拼接；不要把 `params.path` / `params.uri` 直接用于接口地址或显示。
-- **目录判断**：前端统一使用 `isDirectoryEntry`（同时覆盖 `Directory` 与 `SymlinkDir`）。
-- **播放器**：`MediaPlayer` 中操作当前媒体元素时必须使用 `activePlayer()`（按 `type()` 选择 `videoPlayerRef` / `audioPlayerRef`）。不要使用 `videoPlayerRef ?? audioPlayerRef` —— 切换音视频后旧引用仍指向已卸载元素。音量、倍速、循环模式与播放进度存于 `lib/playerPreferences.ts`（localStorage），读写均需包 try/catch；自动播放被拦截时先静音重试，再显示中心播放按钮。
-- **前端技术栈**：SolidJS + Solid Router + TanStack Query + Tailwind CSS v4 + Vite；图标使用 `@tabler/icons-solidjs`。
-- `web/README.md` 是 SolidJS 模板自带的说明文档，不是本项目的文档；项目文档以根目录 `README.md` 为准。
-- 版本号：`Cargo.toml` 与 `web/package.json` 保持一致（当前 0.5.4）。
+- **统一错误**：handler 返回 `Result<_, ApiError>`，错误体为 `{ "error": "..." }`。新增 API 请复用 `ApiError`，不要返回纯文本。
+- **API 响应**：成功响应直接返回业务 JSON（无 `message/data` 包装）。字段使用 snake_case 的既有命名（`name` / `type` / `size` / `modified` / `entries` / `parent`），Go 侧结构体 tag 必须同步。
+- **新增 API**：在 `src/routes.rs` 添加路由并实现 handler；未匹配路径由 `assets::serve` 兜底返回 `index.html`。
+- **文件下载**：`text/html`、`application/xhtml+xml`、`image/svg+xml` 会附加 `Content-Disposition: attachment`，避免同源脚本执行；新增可执行内容类型时请同步 `is_dangerous`。中文文件名使用 RFC 5987 编码，改这段逻辑时注意保留。
+- **缩略图**：`/api/thumb` 仅在扩展名属于图片白名单时工作，宽高限制在 64–1024；解码在 `spawn_blocking` 中进行，信号量上限 4，缓存键为 `(路径, 大小, 修改时间, 宽度)`，缓存超过 512 条时整体清空。修改时不要阻塞 async worker。
+- **静态资源**：`index.html` 使用 `no-cache`，其余资源一年 immutable；`index.html` 里的 `app.wasm` / `wasm_exec.js` 带内容哈希查询参数，因此 WASM 更新后浏览器会自动拉新。
+- **压缩**：`-c` 启用 gzip，仅压缩大于 1 KiB 且非图片的响应。
+- **日志**：`RUST_LOG` 生效（`EnvFilter`）。
+
+### Web UI（Go / mygo）
+
+- **视图即状态**：`a.view` 每帧重建 UI；所有界面状态必须放在 `app` / `browseState` / `viewerState` / `playerState` 中，不要在 view 里创建需要跨帧保留的可变状态。
+- **异步更新**：网络请求、图片解码都放 goroutine，结果必须通过 `a.win.Update(func(){...})` 写回状态；回写前校验 `path` 仍是当前路径，避免快速切换目录时旧结果覆盖新页面。
+- **路由**：使用 `ui.NewRouter` 与 `r.Param("path")`；参数是编码后的 fragment 路径。拼接路由必须使用 `escapePath` / `browseRoute` / `viewRoute` / `playRoute`，不要手工拼接中文或斜杠。离开 `/play/`、`/view/` 时由 `syncRoute` 负责关闭播放器/清空查看器。
+- **接口 URL**：一律通过 `siteOrigin()` + `apiURL` 构造绝对 URL（`rawURL` / `downloadURL` / `thumbURL`），路径用 `url.Values` 编码；不要把文件名直接拼进 URL。
+- **媒体**：
+  - 视频使用 `ui.Video` + `video.OpenURL(rawURL)`，由浏览器原生 `<video>` 播放（浏览器支持的编码才能播）。
+  - 音频用 `audio.OpenStream(io.ReadSeeker)`，解码器由 `api.go` 的 blank import 注册（`audio/mp3`、`audio/vorbis`、`audio/flac`、`audio/aac`、`audio/mp4`，WAV 内置）；新增格式时补 import，否则运行时报“不支持”。
+  - `video.VideoPlayer` / `audio.Player` 的所有方法都必须在主线程（view 或 `win.Update` 内）调用；进度更新靠 `c.After` 在播放中轮询，不要用后台 ticker。
+  - 播放结束只处理一次（`handledEnd`），随后按循环模式或播放列表顺序切歌。
+- **列表状态**：切换目录时重置 `ui.ListState` / `ui.GridState`；`/api/list` 不排序，前端由 `visibleEntries` 统一“目录优先 + 当前排序”。
+- **缩略图**：网格视图调用 `/api/thumb` 并缓存在 `browse.thumbs`；不要为每个网格项下载原图再解码。
+- **响应式**：窄屏策略集中在 view 中——工具栏 `Wrap()`（<760）、音量滑块与 Spacer（<640）、表格列（<480 隐藏大小，<720 隐藏修改时间）、播放列表（<900 隐藏）。新增控件时保持同一套阈值。
+- **图标**：使用 `icons.go` 里的 `svg(body)` + `iconButton`，不要引入图片资源。
+- **构建产物**：只改 `web/index.html`（模板），不要手改 `web/dist`；`web/dist` 已 gitignore，由 `go run ./cmd/build` 生成，`wasm_exec.js` 必须从当前 Go 的 `GOROOT` 复制。
+- **依赖版本**：`go.mod` 固定 `mygo v0.9.0`。升级 mygo 前先确认所用 API 未变；API 参考可用 `go doc github.com/egoist/mygo/ui` 或模块缓存里的 `docs/`。
+- **旧技术栈已移除**：不要再引入 pnpm / Node / Vite / SolidJS / HTML 组件或 `web/src`；前端源码只在 `web/*.go`。
+- 版本号以 `Cargo.toml` 为准（当前 0.6.0）。

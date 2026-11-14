@@ -10,53 +10,39 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [24]
-
     steps:
-    - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
-    - uses: pnpm/action-setup@v6
-      with:
-        version: 12
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: web/go.mod
+          cache-dependency-path: web/go.sum
 
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v7
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'pnpm'
-        cache-dependency-path: web/pnpm-lock.yaml
+      - name: Build web
+        working-directory: web
+        run: go run ./cmd/build
 
-    - name: Build web
-      run: |
-        cd web
-        pnpm install
-        pnpm build
-        cd ..
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: build
+          target: aarch64-unknown-linux-gnu
+          args: --release --verbose
+          strip: true
 
-    - name: Build binary
-      uses: houseabsolute/actions-rust-cross@v1
-      with:
-        command: build
-        target: aarch64-unknown-linux-gnu
-        args: --release --verbose
-        strip: true
+      - name: Run tests
+        uses: houseabsolute/actions-rust-cross@v1
+        with:
+          command: test
+          target: aarch64-unknown-linux-gnu
+          args: --release --verbose
 
-    - name: Run tests
-      uses: houseabsolute/actions-rust-cross@v1
-      with:
-        command: test
-        target: aarch64-unknown-linux-gnu
-        args: --release --verbose
-
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
-      with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: target/aarch64-unknown-linux-gnu/release/finkyo
-        asset_name: finkyo-linux-aarch64
-        tag: ${{ github.ref }}
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/aarch64-unknown-linux-gnu/release/finkyo
+          asset_name: finkyo-linux-aarch64
+          tag: ${{ github.ref }}

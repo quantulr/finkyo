@@ -1,1 +1,2 @@
-web/** linguist-vendored
+web/dist/** linguist-generated
+*.wasm binary

@@ -1,16 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-    <meta name="theme-color" content="#000000"/>
-    <link rel="shortcut icon" type="image/ico" href="/src/assets/favicon.ico"/>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
     <title>finkyo</title>
-</head>
-<body>
-<noscript>You need to enable JavaScript to run this app.</noscript>
-<div id="root"></div>
-
-<script src="/src/index.tsx" type="module"></script>
-</body>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background: #1e1e1e;
+        }
+      }
+      #mygo {
+        position: fixed;
+        inset: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="mygo"></div>
+    <script src="wasm_exec.js?v={{VERSION}}"></script>
+    <script>
+      const go = new Go();
+      WebAssembly.instantiateStreaming(fetch("app.wasm?v={{VERSION}}"), go.importObject)
+        .then((result) => go.run(result.instance))
+        .catch((error) => {
+          document.body.textContent = "无法加载 finkyo: " + error;
+        });
+    </script>
+  </body>
 </html>

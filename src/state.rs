@@ -1,20 +1,23 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
-const IMAGE_SIZE_CACHE_LIMIT: usize = 4096;
+use tokio::sync::Semaphore;
 
-#[derive(Clone, Copy)]
-struct ImageSizeCacheEntry {
-    size: u64,
-    modified: Option<u64>,
-    dimensions: Option<(u32, u32)>,
-}
+use crate::path::ThumbKey;
 
 pub struct AppState {
+    /// Canonicalized root directory.
     pub root: PathBuf,
     pub show_hidden: bool,
-    image_size_cache: Mutex<HashMap<PathBuf, ImageSizeCacheEntry>>,
+    /// Limits concurrent thumbnail decoding.
+    pub thumb_permits: Semaphore,
+    pub thumb_cache: Mutex<HashMap<ThumbKey, Arc<Thumbnail>>>,
+}
+
+pub struct Thumbnail {
+    pub mime: &'static str,
+    pub data: Vec<u8>,
 }
 
 impl AppState {
@@ -22,42 +25,8 @@ impl AppState {
         Self {
             root,
             show_hidden,
-            image_size_cache: Mutex::new(HashMap::new()),
+            thumb_permits: Semaphore::new(4),
+            thumb_cache: Mutex::new(HashMap::new()),
         }
-    }
-
-    /// 返回 `None` 表示缓存未命中；`Some(None)` 表示该图片没有可读取的尺寸。
-    pub fn cached_image_size(
-        &self,
-        path: &Path,
-        size: u64,
-        modified: Option<u64>,
-    ) -> Option<Option<(u32, u32)>> {
-        let cache = self.image_size_cache.lock().ok()?;
-        let entry = cache.get(path)?;
-        (entry.size == size && entry.modified == modified).then_some(entry.dimensions)
-    }
-
-    pub fn cache_image_size(
-        &self,
-        path: PathBuf,
-        size: u64,
-        modified: Option<u64>,
-        dimensions: Option<(u32, u32)>,
-    ) {
-        let Ok(mut cache) = self.image_size_cache.lock() else {
-            return;
-        };
-        if cache.len() >= IMAGE_SIZE_CACHE_LIMIT {
-            cache.clear();
-        }
-        cache.insert(
-            path,
-            ImageSizeCacheEntry {
-                size,
-                modified,
-                dimensions,
-            },
-        );
     }
 }
