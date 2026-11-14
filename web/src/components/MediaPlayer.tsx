@@ -25,7 +25,7 @@ import {
   Show,
   Switch,
 } from "solid-js";
-import { fileLinkUrl, filesUrl, joinPath, playUrl } from "@/lib/path";
+import { decodePath, fileLinkUrl, filesUrl, joinPath, playUrl } from "@/lib/path";
 
 function formatDuration(seconds: number) {
   // 确保秒数为非负数
@@ -42,9 +42,11 @@ function formatDuration(seconds: number) {
 const MediaPlayer = () => {
   const params: { uri: string } = useParams();
   const navigate = useNavigate();
-  const type = createMemo(() => mime.getType(params.uri));
-  const path = createMemo(() => params.uri.split("/").slice(0, -1).join("/"));
-  const currentName = createMemo(() => params.uri.split("/").pop() ?? "");
+  // useParams 返回 URL 原始编码路径，先解码再用于接口与拼接。
+  const uri = createMemo(() => decodePath(params.uri));
+  const type = createMemo(() => mime.getType(uri()));
+  const path = createMemo(() => uri().split("/").slice(0, -1).join("/"));
+  const currentName = createMemo(() => uri().split("/").pop() ?? "");
 
   /* 播放列表 */
   const query = useQuery(() => ({
@@ -102,7 +104,7 @@ const MediaPlayer = () => {
 
   /* 切换媒体 */
   createEffect(() => {
-    params.uri;
+    uri();
     setPlayerState((prev) => ({
       ...prev,
       playing: false,
@@ -395,7 +397,7 @@ const MediaPlayer = () => {
       <Switch>
         <Match when={type()?.startsWith("audio")}>
           <audio
-            src={fileLinkUrl(params.uri)}
+            src={fileLinkUrl(uri())}
             ref={audioPlayerRef}
             autoplay={true}
             onError={() => setPlaybackError(true)}
@@ -455,7 +457,7 @@ const MediaPlayer = () => {
             }}
             ref={videoPlayerRef}
             class={`h-[100dvh] w-full`}
-            src={fileLinkUrl(params.uri)}
+            src={fileLinkUrl(uri())}
             autoplay={true}
             playsinline={true}
           />

@@ -3,6 +3,7 @@ import { menus } from "@/components/ContextMenu";
 import { useNavigate, useParams } from "@solidjs/router";
 import EntryIcon from "@/components/EntryIcon";
 import { runFileAction } from "@/lib/fileActions";
+import { decodePath } from "@/lib/path";
 
 const BottomSheets = () => {
   const { showContextMenu, openType, entry, closeContextMenu, actions } =
@@ -49,7 +50,7 @@ const BottomSheets = () => {
                     runFileAction(
                       item.action,
                       currentEntry,
-                      params.path,
+                      decodePath(params.path ?? ""),
                       navigate,
                     );
                     closeContextMenu();

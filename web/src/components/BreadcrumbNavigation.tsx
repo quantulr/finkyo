@@ -3,21 +3,22 @@ import { useNavigate, useParams } from "@solidjs/router";
 import { createMemo, onCleanup, onMount } from "solid-js";
 
 import { createOverlayScrollbars } from "overlayscrollbars-solid";
-import { browseUrl } from "@/lib/path";
+import { browseUrl, decodePath } from "@/lib/path";
 
 const BreadcrumbNavigation = () => {
   const navigate = useNavigate();
   const params: { path?: string } = useParams();
   let scrollRef: HTMLDivElement | undefined;
+  const currentPath = createMemo(() => decodePath(params.path ?? ""));
   const links = createMemo(
     () =>
-      params.path
-        ?.split("/")
+      currentPath()
+        .split("/")
         .filter((link) => link.length > 0)
         .map((link) => ({
           path: link,
           label: link,
-        })) ?? [],
+        })),
   );
 
   const [initialize, instance] = createOverlayScrollbars({

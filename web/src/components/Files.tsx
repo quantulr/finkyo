@@ -33,7 +33,7 @@ import BottomSheets from "@/components/BottomSheets";
 import { useQuery } from "@tanstack/solid-query";
 import saved_position from "@/store/saved_position";
 import layoutStore, { LayoutType } from "@/store/layout";
-import { browseUrl, fileLinkUrl, filesUrl, joinPath, playUrl } from "@/lib/path";
+import { browseUrl, decodePath, fileLinkUrl, filesUrl, joinPath, playUrl } from "@/lib/path";
 import { isDirectoryEntry } from "@/lib/entries";
 
 type SortKey = "name" | "size" | "modified";
@@ -44,8 +44,10 @@ const Files = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams<{ q?: string }>();
   const navigate = useNavigate();
+  // useParams 返回 URL 原始编码路径，先解码再用于接口与拼接。
+  const dirPath = createMemo(() => decodePath(params.path ?? ""));
   const query = useQuery(() => ({
-    queryKey: [params.path ?? ""],
+    queryKey: [dirPath()],
     queryFn: ({ queryKey }) =>
       request.get<never, BaseResponse<FileEntryItem[]>>(
         filesUrl(queryKey[0]),
@@ -161,7 +163,7 @@ const Files = () => {
   /* 搜索 end */
 
   const onEntryClick = (entry: FileEntryItem) => {
-    const fullPath = joinPath(params.path, entry.name);
+    const fullPath = joinPath(dirPath(), entry.name);
 
     if (isDirectoryEntry(entry)) {
       navigate(browseUrl(fullPath));

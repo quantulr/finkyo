@@ -2,7 +2,7 @@ import { Accessor, createEffect, onCleanup } from "solid-js";
 import { useParams } from "@solidjs/router";
 import PhotoSwipeLightbox from "photoswipe/lightbox";
 import "photoswipe/style.css";
-import { fileLinkUrl, joinPath } from "@/lib/path";
+import { fileLinkUrl, decodePath, joinPath } from "@/lib/path";
 
 const createPhotoSwipe = ({
   images,
@@ -15,6 +15,7 @@ const createPhotoSwipe = ({
 }) => {
   const params: { path?: string } = useParams();
   let lightbox: PhotoSwipeLightbox | null = null;
+  const dirPath = () => decodePath(params.path ?? "");
 
   createEffect(() => {
     const list = images();
@@ -25,7 +26,7 @@ const createPhotoSwipe = ({
     const current = new PhotoSwipeLightbox({
       dataSource: list.map((image) => ({
         id: image.name,
-        src: fileLinkUrl(joinPath(params.path, image.name)),
+        src: fileLinkUrl(joinPath(dirPath(), image.name)),
         width: image.width ?? 1,
         height: image.height ?? 1,
       })),

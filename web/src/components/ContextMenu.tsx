@@ -6,6 +6,7 @@ import {
 } from "@tabler/icons-solidjs";
 import { useNavigate, useParams } from "@solidjs/router";
 import { runFileAction, type FileAction } from "@/lib/fileActions";
+import { decodePath } from "@/lib/path";
 
 export const menus: {
   icon: any;
@@ -58,7 +59,7 @@ const ContextMenu = () => {
                     runFileAction(
                       item.action,
                       currentEntry,
-                      params.path,
+                      decodePath(params.path ?? ""),
                       navigate,
                     );
                     closeContextMenu();
