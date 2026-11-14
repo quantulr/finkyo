@@ -12,6 +12,7 @@ import {
   Match,
   onCleanup,
   onMount,
+  Show,
   Switch,
 } from "solid-js";
 import request from "@/lib/request";
@@ -22,6 +23,7 @@ import {
   IconLayoutGrid,
   IconLoader2,
   IconSearch,
+  IconSortAscending,
   IconSortDescending,
   IconTable,
 } from "@tabler/icons-solidjs";
@@ -31,6 +33,10 @@ import BottomSheets from "@/components/BottomSheets";
 import { useQuery } from "@tanstack/solid-query";
 import saved_position from "@/store/saved_position";
 import layoutStore, { LayoutType } from "@/store/layout";
+import { browseUrl, fileLinkUrl, filesUrl, joinPath, playUrl } from "@/lib/path";
+import { isDirectoryEntry } from "@/lib/entries";
+
+type SortKey = "name" | "size" | "modified";
 
 const Files = () => {
   // route
@@ -42,7 +48,7 @@ const Files = () => {
     queryKey: [params.path ?? ""],
     queryFn: ({ queryKey }) =>
       request.get<never, BaseResponse<FileEntryItem[]>>(
-        `/files/${queryKey[0]}`,
+        filesUrl(queryKey[0]),
       ),
   }));
 
@@ -75,10 +81,6 @@ const Files = () => {
   /* end */
 
   // fetch file list
-  /*  const [filesResponse] = createResource(
-      () => params.path ?? "",
-      (key) => request.get<never, BaseResponse<FileEntryItem[]>>(`/files/${key}`),
-    );*/
   const files = createMemo(() =>
     query.data?.data.filter((entry) =>
       entry.name.toLowerCase().includes(searchParams.q?.toLowerCase() ?? ""),
@@ -87,6 +89,46 @@ const Files = () => {
   const images = createMemo(() =>
     files()?.filter((entry) => mime.getType(entry.name)?.startsWith("image/")),
   );
+
+  /* 排序 */
+  const [sortKey, setSortKey] = createSignal<SortKey>("name");
+  const [sortAsc, setSortAsc] = createSignal(true);
+  const sortedFiles = createMemo(() => {
+    const list = files();
+    if (!list) {
+      return undefined;
+    }
+
+    const direction = sortAsc() ? 1 : -1;
+    return [...list].sort((a, b) => {
+      const aDir = isDirectoryEntry(a);
+      const bDir = isDirectoryEntry(b);
+      if (aDir !== bDir) {
+        return aDir ? -1 : 1;
+      }
+
+      let result: number;
+      if (sortKey() === "name") {
+        result = a.name.localeCompare(b.name, "zh-CN", {
+          numeric: true,
+          sensitivity: "base",
+        });
+      } else if (sortKey() === "size") {
+        result = (a.size ?? 0) - (b.size ?? 0);
+      } else {
+        result = (a.modified ?? 0) - (b.modified ?? 0);
+      }
+      return result * direction;
+    });
+  });
+  /* 排序 end */
+
+  const errorMessage = () => {
+    const error = query.error as
+      | { response?: { data?: { message?: string } }; message?: string }
+      | null;
+    return error?.response?.data?.message ?? error?.message ?? "未知错误";
+  };
 
   /* photo swipe */
   const [openIndex, setOpenIndex] = createSignal<number | undefined>();
@@ -116,40 +158,33 @@ const Files = () => {
   onCleanup(() => {
     document.removeEventListener("keydown", onCtrlF);
   });
-
   /* 搜索 end */
 
   const onEntryClick = (entry: FileEntryItem) => {
-    if ((entry.entryType as string) === "Directory") {
-      navigate(
-        params.path
-          ? `/browse/${params.path}/${entry.name}`
-          : `/browse/${entry.name}`,
-      );
+    const fullPath = joinPath(params.path, entry.name);
+
+    if (isDirectoryEntry(entry)) {
+      navigate(browseUrl(fullPath));
     } else if (mime.getType(entry.name)?.startsWith("image")) {
       const imageIndex = images()?.findIndex(
         (image) => entry.name === image.name,
       );
-      (imageIndex ?? -1) >= 0 && setOpenIndex(imageIndex);
+      if ((imageIndex ?? -1) >= 0) {
+        setOpenIndex(imageIndex);
+      }
     } else if (
       mime.getType(entry.name)?.startsWith("video") ||
       mime.getType(entry.name)?.startsWith("audio")
     ) {
-      const mediaPlayUrl = params.path
-        ? `/play/${params.path}/${entry.name}`
-        : `/play/${entry.name}`;
-      window.open(mediaPlayUrl);
+      window.open(playUrl(fullPath), "_blank", "noopener");
     } else if (
       mime.getType(entry.name)?.startsWith("text") ||
       mime.getType(entry.name)?.startsWith("application/pdf")
     ) {
-      window.open(
-        params.path
-          ? `/file_link/${params.path}/${entry.name}`
-          : `/file_link/${entry.name}`,
-      );
+      window.open(fileLinkUrl(fullPath), "_blank", "noopener");
     }
   };
+
   return (
     <>
       <ContextMenu />
@@ -163,11 +198,29 @@ const Files = () => {
           <div class={"left"}></div>
 
           <div class={"right flex items-center"}>
+            <select
+              value={sortKey()}
+              onChange={(ev) => setSortKey(ev.currentTarget.value as SortKey)}
+              aria-label="排序字段"
+              class={
+                "mr-1 h-8 cursor-pointer rounded-lg border-2 border-blue-200 bg-white px-1 text-sm text-blue-600 focus:outline-none"
+              }
+            >
+              <option value="name">名称</option>
+              <option value="modified">时间</option>
+              <option value="size">大小</option>
+            </select>
             <button
               class={"cursor-pointer rounded-lg p-1 active:bg-blue-200"}
-              onClick={() => {}}
+              aria-label={sortAsc() ? "升序" : "降序"}
+              onClick={() => setSortAsc((value) => !value)}
             >
-              <IconSortDescending class={"size-6 text-blue-500"} />
+              <Show
+                when={sortAsc()}
+                fallback={<IconSortDescending class={"size-6 text-blue-500"} />}
+              >
+                <IconSortAscending class={"size-6 text-blue-500"} />
+              </Show>
             </button>
             <input
               ref={searchFieldRef}
@@ -183,15 +236,9 @@ const Files = () => {
                   const searchValue = (ev.target as HTMLInputElement).value;
                   if (searchValue.trim() !== "") {
                     setSearchParams({ q: searchValue.trim() });
-                    // navigate(
-                    //   params.path
-                    //     ? `?q=${searchValue.trim()}`
-                    //     : `?q=${searchValue.trim()}`,
-                    // );
                   }
                 } else if (ev.key === "Escape") {
                   setShowSearchField(false);
-                  // navigate(params.path ? `/browse/${params.path}` : `/browse`);
                   setSearchParams({ q: undefined });
                 }
               }}
@@ -202,6 +249,7 @@ const Files = () => {
                   ? "w-0 overflow-hidden"
                   : "ml-2 size-8 p-1"
               }`}
+              aria-label="搜索"
               onClick={() => {
                 setShowSearchField(true);
                 searchFieldRef?.focus();
@@ -224,6 +272,7 @@ const Files = () => {
                   });
                   setLayout(LayoutType.Grid);
                 }}
+                aria-label="网格布局"
                 class={`flex h-full w-full cursor-pointer items-center justify-center transition-all hover:bg-blue-300 ${layout() === LayoutType.Grid ? "bg-blue-400" : ""}`}
               >
                 <IconLayoutGrid class={"size-9/12"} />
@@ -238,6 +287,7 @@ const Files = () => {
                   });
                   setLayout(LayoutType.Table);
                 }}
+                aria-label="表格布局"
                 class={`flex h-full w-full cursor-pointer items-center justify-center transition-all hover:bg-blue-300 ${layout() === LayoutType.Table ? "bg-blue-400" : ""}`}
               >
                 <IconTable class={"size-9/12"} />
@@ -252,17 +302,55 @@ const Files = () => {
                 <IconLoader2 class={"size-12 animate-spin"} />
               </div>
             </Match>
-            <Match when={files()}>
-              <div class={"p-4"}>
-                <Switch>
-                  <Match when={layout() === LayoutType.Grid}>
-                    <FileGrid files={files} onEntryClick={onEntryClick} />
-                  </Match>
-                  <Match when={layout() === LayoutType.Table}>
-                    <FileTable files={files} onEntryClick={onEntryClick} />
-                  </Match>
-                </Switch>
+            <Match when={query.isError}>
+              <div
+                class={
+                  "flex h-full flex-col items-center justify-center gap-3 px-4 text-gray-500"
+                }
+              >
+                <p>加载失败：{errorMessage()}</p>
+                <button
+                  class={
+                    "cursor-pointer rounded-lg bg-blue-500 px-4 py-1.5 text-white active:bg-blue-600"
+                  }
+                  onClick={() => {
+                    void query.refetch();
+                  }}
+                >
+                  重试
+                </button>
               </div>
+            </Match>
+            <Match when={sortedFiles()}>
+              <Show
+                when={(sortedFiles()?.length ?? 0) > 0}
+                fallback={
+                  <div
+                    class={
+                      "flex h-full items-center justify-center text-gray-400"
+                    }
+                  >
+                    {searchParams.q ? "没有匹配的文件" : "这里还没有文件"}
+                  </div>
+                }
+              >
+                <div class={"p-4"}>
+                  <Switch>
+                    <Match when={layout() === LayoutType.Grid}>
+                      <FileGrid
+                        files={sortedFiles}
+                        onEntryClick={onEntryClick}
+                      />
+                    </Match>
+                    <Match when={layout() === LayoutType.Table}>
+                      <FileTable
+                        files={sortedFiles}
+                        onEntryClick={onEntryClick}
+                      />
+                    </Match>
+                  </Switch>
+                </div>
+              </Show>
             </Match>
           </Switch>
         </div>

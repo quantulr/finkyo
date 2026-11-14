@@ -1,27 +1,28 @@
 import contextMenuStore, { OpenType } from "@/store/context_menu";
 import {
-  IconCopy,
   IconFileDownload,
   IconFolderOpen,
-  IconTrash,
+  IconLink,
 } from "@tabler/icons-solidjs";
-import { useParams } from "@solidjs/router";
+import { useNavigate, useParams } from "@solidjs/router";
+import { runFileAction, type FileAction } from "@/lib/fileActions";
 
 export const menus: {
   icon: any;
   label: string;
-  action: string;
+  action: FileAction;
 }[] = [
   { icon: IconFolderOpen, label: "打开", action: "open" },
   { icon: IconFileDownload, label: "下载", action: "download" },
-  { icon: IconTrash, label: "删除", action: "delete" },
-  { icon: IconCopy, label: "复制", action: "copy" },
+  { icon: IconLink, label: "复制链接", action: "copyLink" },
 ];
 
 const ContextMenu = () => {
-  const params = useParams();
+  const params: { path?: string } = useParams();
+  const navigate = useNavigate();
   const { showContextMenu, pos, closeContextMenu, entry, actions, openType } =
     contextMenuStore;
+
   return (
     <div
       class={`fixed top-0 left-0 z-10 h-[100dvh] w-[100dvw] opacity-100 ${showContextMenu() && openType() === OpenType.ContextMenu ? "block" : "hidden"}`}
@@ -50,20 +51,17 @@ const ContextMenu = () => {
                 <li
                   onClick={(ev) => {
                     ev.stopPropagation();
-                    const file_link = params.path
-                      ? `/file_link/${params.path}/${entry()?.name}`
-                      : `/file_link/${entry()?.name}`;
-                    // return
-                    if (item.action === "delete") {
-                      console.log("delete item");
-                    } else if (item.action === "open") {
-                      window.open(file_link);
-                    } else if (item.action === "download") {
-                      const link = document.createElement("a");
-                      link.href = file_link;
-                      link.download = entry()?.name ?? "download";
-                      link.click();
+                    const currentEntry = entry();
+                    if (!currentEntry) {
+                      return;
                     }
+                    runFileAction(
+                      item.action,
+                      currentEntry,
+                      params.path,
+                      navigate,
+                    );
+                    closeContextMenu();
                   }}
                   class={
                     "flex h-10 cursor-pointer items-center rounded-lg px-2 transition-all hover:bg-blue-300"

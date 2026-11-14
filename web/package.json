@@ -1,12 +1,13 @@
 {
   "name": "finkyo-web",
-  "version": "0.0.0",
+  "version": "0.5.4",
   "description": "",
   "type": "module",
   "scripts": {
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc --noEmit",
     "serve": "vite preview",
     "fmt": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md}\""
   },

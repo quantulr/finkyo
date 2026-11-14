@@ -3,6 +3,7 @@ import request from "@/lib/request";
 import { useNavigate, useParams } from "@solidjs/router";
 import {
   IconList,
+  IconMaximize,
   IconMusic,
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
@@ -10,7 +11,6 @@ import {
   IconPlayerTrackPrevFilled,
   IconVideoFilled,
   IconVolume,
-  IconVolume2,
   IconVolume3,
 } from "@tabler/icons-solidjs";
 import { useQuery } from "@tanstack/solid-query";
@@ -25,8 +25,7 @@ import {
   Show,
   Switch,
 } from "solid-js";
-
-// dayjs.extend(duration);
+import { fileLinkUrl, filesUrl, joinPath, playUrl } from "@/lib/path";
 
 function formatDuration(seconds: number) {
   // 确保秒数为非负数
@@ -42,15 +41,17 @@ function formatDuration(seconds: number) {
 
 const MediaPlayer = () => {
   const params: { uri: string } = useParams();
+  const navigate = useNavigate();
   const type = createMemo(() => mime.getType(params.uri));
   const path = createMemo(() => params.uri.split("/").slice(0, -1).join("/"));
+  const currentName = createMemo(() => params.uri.split("/").pop() ?? "");
 
   /* 播放列表 */
   const query = useQuery(() => ({
-    queryKey: [path() ?? ""],
+    queryKey: [path()],
     queryFn: ({ queryKey }) =>
       request.get<never, BaseResponse<FileEntryItem[]>>(
-        `/files/${queryKey[0]}`,
+        filesUrl(queryKey[0]),
       ),
   }));
 
@@ -66,45 +67,63 @@ const MediaPlayer = () => {
 
   /* 播放器控制 */
   const [showControls, setShowControls] = createSignal(true); // 控制播放器控制栏的显示与隐藏
-  let timeout: any | undefined; // 用于控制隐藏播放器控制栏的定时器
+  let timeout: ReturnType<typeof setTimeout> | undefined; // 用于控制隐藏播放器控制栏的定时器
 
   const [playerState, setPlayerState] = createSignal({
     playing: false,
     currentTime: 0,
     duration: 0,
-    muted: type()?.startsWith("video") ? true : false,
+    muted: false,
   }); // 播放器状态
+  const [playbackError, setPlaybackError] = createSignal(false);
   let videoPlayerRef: HTMLVideoElement | undefined; // 视频播放器引用
   let audioPlayerRef: HTMLAudioElement | undefined; // 音频播放器引用
   /* 播放器控制 end */
 
-  /* 切换媒体 */
-  const navigate = useNavigate();
-  createEffect(() => {
-    if (mime.getType(params.uri)?.startsWith("audio/")) {
-      videoPlayerRef = undefined;
-      setPlayerState((prev) => ({
-        ...prev,
-        playing: false,
-        currentTime: 0,
-        duration: 0,
-      }));
-    } else if (mime.getType(params.uri)?.startsWith("video/")) {
-      audioPlayerRef = undefined;
-      setPlayerState((prev) => ({
-        ...prev,
-        playing: false,
-        currentTime: 0,
-        duration: 0,
-        muted: videoPlayerRef?.muted ?? true,
-      }));
+  const currentIndex = createMemo(() =>
+    mediaFiles().findIndex((file) => file.name === currentName()),
+  );
+
+  const playOffset = (offset: number) => {
+    const list = mediaFiles();
+    if (list.length === 0) {
+      return;
     }
+
+    const index = currentIndex();
+    const next =
+      index < 0
+        ? offset > 0
+          ? 0
+          : list.length - 1
+        : (index + offset + list.length) % list.length;
+    navigate(playUrl(joinPath(path(), list[next].name)));
+  };
+
+  /* 切换媒体 */
+  createEffect(() => {
+    params.uri;
+    setPlayerState((prev) => ({
+      ...prev,
+      playing: false,
+      currentTime: 0,
+      duration: 0,
+    }));
+    setPlaybackError(false);
+
+    const timer = setTimeout(() => {
+      const player = type()?.startsWith("video")
+        ? videoPlayerRef
+        : audioPlayerRef;
+      void player?.play().catch(() => {});
+    }, 50);
+    onCleanup(() => clearTimeout(timer));
   });
   /* 切换媒体 end */
 
   /* 在网页标题中显示文件名 */
   createEffect(() => {
-    const title = `${playerState().playing ? "正在播放" : "已暂停"}: ${decodeURIComponent(params.uri.split("/").pop() ?? "")}`;
+    const title = `${playerState().playing ? "正在播放" : "已暂停"}: ${currentName()}`;
     document.title = title;
   });
   /* end */
@@ -115,13 +134,13 @@ const MediaPlayer = () => {
       if (playerState().playing) {
         videoPlayerRef.pause();
       } else {
-        videoPlayerRef.play();
+        void videoPlayerRef.play().catch(() => {});
       }
     } else if (audioPlayerRef && type()?.startsWith("audio")) {
       if (playerState().playing) {
         audioPlayerRef.pause();
       } else {
-        audioPlayerRef.play();
+        void audioPlayerRef.play().catch(() => {});
       }
     }
   };
@@ -139,9 +158,29 @@ const MediaPlayer = () => {
   });
   /* 切换播放状态 end */
 
+  const toggleMute = () => {
+    const player = videoPlayerRef ?? audioPlayerRef;
+    if (!player) {
+      return;
+    }
+    player.muted = !player.muted;
+    setPlayerState((prev) => ({ ...prev, muted: player.muted }));
+  };
+
+  const enterFullscreen = () => {
+    if (!videoPlayerRef) {
+      return;
+    }
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+    } else {
+      void videoPlayerRef.requestFullscreen().catch(() => {});
+    }
+  };
+
   return (
     <div
-      class={"h-[100dvh] bg-black"}
+      class={"relative h-[100dvh] bg-black"}
       onDblClick={() => {
         if (isTouchDevice()) {
           tooglePlay();
@@ -164,6 +203,16 @@ const MediaPlayer = () => {
         }
       }}
     >
+      <Show when={playbackError()}>
+        <div
+          class={
+            "pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/70 px-6 text-center text-white"
+          }
+        >
+          浏览器无法播放该格式，请下载后查看
+        </div>
+      </Show>
+
       <Show when={type()?.startsWith("audio")}>
         <div class={"flex h-[calc(100dvh-120px)] items-center justify-center"}>
           <IconMusic class={"size-20 animate-pulse text-white"} />
@@ -178,7 +227,7 @@ const MediaPlayer = () => {
           }, 3000);
         }}
         class={
-          "controls-wrap fixed bottom-0 left-0 z-10 flex h-30 w-[100dvw] items-center justify-center duration-700"
+          "controls-wrap fixed bottom-0 left-0 z-10 flex h-30 w-full items-center justify-center duration-700"
         }
       >
         <div
@@ -209,42 +258,39 @@ const MediaPlayer = () => {
             }}
           >
             <ul>
-              {mediaFiles().length &&
-                mediaFiles()
-                  .map((file) => (
-                    <li class={"overflow-hidden"}>
-                      <button
-                        class={`flex h-10 w-full cursor-pointer items-center px-2 hover:bg-blue-100 active:bg-blue-200 ${decodeURIComponent(params.uri.split("/").pop() ?? "") === file.name ? "bg-blue-300" : ""}`}
-                        onClick={() => {
-                          /*  if (type()?.startsWith("audio")) {
-                            if (audioPlayerRef) audioPlayerRef.autoplay = true;
-                          } */
-                          navigate(
-                            `/play/${path() ? `${path()}/` : ""}${file.name}`,
-                          );
-                          setShowPlayList(false);
-                        }}
-                      >
-                        {mime.getType(file.name)?.startsWith("audio/") ? (
-                          <IconMusic class={"size-6 shrink-0 text-blue-500"} />
-                        ) : mime.getType(file.name)?.startsWith("video/") ? (
-                          <IconVideoFilled
-                            class={"size-6 shrink-0 text-blue-500"}
-                          />
-                        ) : (
-                          <IconVolume3
-                            class={"size-6 shrink-0 text-blue-500"}
-                          />
-                        )}
-                        <span class={"ml-2 truncate"}>{file.name}</span>
-                      </button>
-                    </li>
-                  ))
-                  .reduce((prev, curr) => [
-                    prev,
+              {mediaFiles()
+                .map((file) => (
+                  <li class={"overflow-hidden"}>
+                    <button
+                      class={`flex h-10 w-full cursor-pointer items-center px-2 hover:bg-blue-100 active:bg-blue-200 ${currentName() === file.name ? "bg-blue-300" : ""}`}
+                      onClick={() => {
+                        navigate(playUrl(joinPath(path(), file.name)));
+                        setShowPlayList(false);
+                      }}
+                    >
+                      {mime.getType(file.name)?.startsWith("audio/") ? (
+                        <IconMusic class={"size-6 shrink-0 text-blue-500"} />
+                      ) : mime.getType(file.name)?.startsWith("video/") ? (
+                        <IconVideoFilled
+                          class={"size-6 shrink-0 text-blue-500"}
+                        />
+                      ) : (
+                        <IconVolume3
+                          class={"size-6 shrink-0 text-blue-500"}
+                        />
+                      )}
+                      <span class={"ml-2 truncate"}>{file.name}</span>
+                    </button>
+                  </li>
+                ))
+                .reduce<Array<import("solid-js").JSX.Element>>(
+                  (previous, current) => [
+                    previous as import("solid-js").JSX.Element,
                     <div class={"h-[2px] w-full bg-blue-100"}></div>,
-                    curr,
-                  ])}
+                    current,
+                  ],
+                  [],
+                )}
             </ul>
           </div>
           <p class={"flex items-center text-sm"}>
@@ -282,6 +328,7 @@ const MediaPlayer = () => {
                 class={
                   "cursor-pointer rounded-lg transition-colors active:bg-blue-300"
                 }
+                aria-label="播放列表"
                 onClick={() => {
                   setShowPlayList((prev) => !prev);
                 }}
@@ -290,15 +337,18 @@ const MediaPlayer = () => {
               </button>
             </div>
             <div class="center flex items-center justify-between">
-              <IconPlayerTrackPrevFilled
-                class={"size-8"}
+              <button
+                class={"rounded-lg transition-colors active:bg-amber-100"}
+                aria-label="上一个"
                 onClick={() => {
-                  videoPlayerRef?.requestFullscreen();
-                  if (videoPlayerRef) videoPlayerRef.controls = true;
+                  playOffset(-1);
                 }}
-              />
+              >
+                <IconPlayerTrackPrevFilled class={"size-8"} />
+              </button>
               <button
                 class={"mx-2 rounded-lg transition-colors active:bg-amber-100"}
+                aria-label={playerState().playing ? "暂停" : "播放"}
                 onClick={tooglePlay}
               >
                 {playerState().playing ? (
@@ -307,40 +357,37 @@ const MediaPlayer = () => {
                   <IconPlayerPlayFilled class={"size-8"} />
                 )}
               </button>
-              <IconPlayerTrackNextFilled class={"size-8"} />
-            </div>
-            <div class="right">
               <button
-                class={"rounded-lg active:bg-amber-100"}
+                class={"rounded-lg transition-colors active:bg-amber-100"}
+                aria-label="下一个"
                 onClick={() => {
-                  if (videoPlayerRef && !audioPlayerRef) {
-                    if (videoPlayerRef.muted) {
-                      videoPlayerRef.muted = false;
-                      setPlayerState((prev) => ({ ...prev, muted: false }));
-                    } else {
-                      videoPlayerRef.muted = true;
-                      setPlayerState((prev) => ({ ...prev, muted: true }));
-                    }
-                  } else if (audioPlayerRef && !videoPlayerRef) {
-                    if (audioPlayerRef.muted) {
-                      audioPlayerRef.muted = false;
-                      setPlayerState((prev) => ({ ...prev, muted: false }));
-                    } else {
-                      audioPlayerRef.muted = true;
-                      setPlayerState((prev) => ({ ...prev, muted: true }));
-                    }
-                  }
+                  playOffset(1);
                 }}
               >
-                <Switch>
-                  <Match when={playerState().muted}>
-                    <IconVolume3 class={"size-8"} />
-                  </Match>
-                  <Match when={playerState().muted === false}>
-                    <IconVolume class={"size-8"} />
-                  </Match>
-                </Switch>
+                <IconPlayerTrackNextFilled class={"size-8"} />
               </button>
+            </div>
+            <div class="right flex items-center gap-2">
+              <button
+                class={"rounded-lg active:bg-amber-100"}
+                aria-label={playerState().muted ? "取消静音" : "静音"}
+                onClick={toggleMute}
+              >
+                {playerState().muted ? (
+                  <IconVolume3 class={"size-8"} />
+                ) : (
+                  <IconVolume class={"size-8"} />
+                )}
+              </button>
+              <Show when={type()?.startsWith("video")}>
+                <button
+                  class={"rounded-lg active:bg-amber-100"}
+                  aria-label="全屏"
+                  onClick={enterFullscreen}
+                >
+                  <IconMaximize class={"size-8"} />
+                </button>
+              </Show>
             </div>
           </div>
         </div>
@@ -348,8 +395,10 @@ const MediaPlayer = () => {
       <Switch>
         <Match when={type()?.startsWith("audio")}>
           <audio
-            src={`/file_link/${params.uri}`}
+            src={fileLinkUrl(params.uri)}
             ref={audioPlayerRef}
+            autoplay={true}
+            onError={() => setPlaybackError(true)}
             onPlay={() => {
               setPlayerState((prev) => ({ ...prev, playing: true }));
             }}
@@ -384,6 +433,7 @@ const MediaPlayer = () => {
             onPause={() => {
               setPlayerState((prev) => ({ ...prev, playing: false }));
             }}
+            onError={() => setPlaybackError(true)}
             onLoadedMetadata={(ev) => {
               setPlayerState((prev) => ({
                 ...prev,
@@ -404,10 +454,9 @@ const MediaPlayer = () => {
               }));
             }}
             ref={videoPlayerRef}
-            class={`h-[100dvh] w-[100dvw]`}
-            src={`/file_link/${params.uri}`}
-            /*           muted={false}
-            autoplay={false} */
+            class={`h-[100dvh] w-full`}
+            src={fileLinkUrl(params.uri)}
+            autoplay={true}
             playsinline={true}
           />
         </Match>

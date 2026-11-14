@@ -1,7 +1,8 @@
-import { Accessor, createEffect, onCleanup, onMount } from "solid-js";
+import { Accessor, createEffect, onCleanup } from "solid-js";
 import { useParams } from "@solidjs/router";
 import PhotoSwipeLightbox from "photoswipe/lightbox";
 import "photoswipe/style.css";
+import { fileLinkUrl, joinPath } from "@/lib/path";
 
 const createPhotoSwipe = ({
   images,
@@ -12,36 +13,42 @@ const createPhotoSwipe = ({
   openIndex: Accessor<number | undefined>;
   onClose: () => void;
 }) => {
-  let lightbox: PhotoSwipeLightbox | null;
+  const params: { path?: string } = useParams();
+  let lightbox: PhotoSwipeLightbox | null = null;
+
   createEffect(() => {
-    const { path }: { path?: string } = useParams();
-    images()?.length &&
-      onMount(() => {
-        lightbox = new PhotoSwipeLightbox({
-          dataSource: images()?.map((image) => ({
-            id: image.name,
-            src: path
-              ? `/file_link/${path}/${image.name}`
-              : `/file_link/${image.name}`,
-            width: image.width,
-            height: image.height,
-          })),
-          wheelToZoom: true,
-          showHideAnimationType: "zoom",
-          pswpModule: () => import("photoswipe"),
-        });
-        lightbox.on("close", onClose);
-        lightbox.init();
-      });
+    const list = images();
+    if (!list?.length) {
+      return;
+    }
+
+    const current = new PhotoSwipeLightbox({
+      dataSource: list.map((image) => ({
+        id: image.name,
+        src: fileLinkUrl(joinPath(params.path, image.name)),
+        width: image.width ?? 1,
+        height: image.height ?? 1,
+      })),
+      wheelToZoom: true,
+      showHideAnimationType: "zoom",
+      pswpModule: () => import("photoswipe"),
+    });
+    current.on("close", onClose);
+    current.init();
+    lightbox = current;
+
     onCleanup(() => {
-      lightbox?.destroy();
-      lightbox = null;
+      current.destroy();
+      if (lightbox === current) {
+        lightbox = null;
+      }
     });
   });
+
   createEffect(() => {
     const index = openIndex();
-    if (index !== undefined) {
-      lightbox?.loadAndOpen(index);
+    if (index !== undefined && lightbox) {
+      lightbox.loadAndOpen(index);
     }
   });
 };

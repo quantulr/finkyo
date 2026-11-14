@@ -3,10 +3,8 @@ import contextMenuStore, { OpenType } from "@/store/context_menu";
 import { IconDots } from "@tabler/icons-solidjs";
 import EntryIcon from "@/components/EntryIcon";
 
-enum EntryType {
-  File = "File",
-  Directory = "Directory",
-}
+const MENU_WIDTH = 192;
+const MENU_HEIGHT = 192;
 
 const FileGrid = ({
   files,
@@ -26,31 +24,15 @@ const FileGrid = ({
           onClick={() => onEntryClick?.(file)}
           onContextMenu={(event) => {
             event.preventDefault();
-            let actions: string[];
-            if ((file.entryType as string) === EntryType.Directory) {
-              actions = [];
-            } else if ((file.entryType as string) === EntryType.File) {
-              actions = ["download"];
-            } else {
-              actions = ["detail"];
-            }
-            let pos: { x: number; y: number } = {
+            const pos = {
               x: event.clientX,
               y: event.clientY,
             };
-            if (event.clientX + 192 > window.innerWidth) {
-              pos.x = window.innerWidth - 192 - 40;
+            if (event.clientX + MENU_WIDTH > window.innerWidth) {
+              pos.x = window.innerWidth - MENU_WIDTH - 40;
             }
-
-            if (
-              event.clientY +
-                (40 * actions.length > 192 ? 40 * actions.length : 192) >
-              window.innerHeight
-            ) {
-              pos.y =
-                window.innerHeight -
-                (40 * actions.length > 192 ? 40 * actions.length : 192) -
-                40;
+            if (event.clientY + MENU_HEIGHT > window.innerHeight) {
+              pos.y = window.innerHeight - MENU_HEIGHT - 40;
             }
             openContextMenu({
               pos,
@@ -62,6 +44,7 @@ const FileGrid = ({
             class={
               "absolute top-1 right-1 z-[2] cursor-pointer rounded-full p-1 transition-colors active:bg-blue-300 md:invisible"
             }
+            aria-label="文件操作"
             onClick={(ev) => {
               ev.stopPropagation();
               openContextMenu({

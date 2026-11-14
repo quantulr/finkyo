@@ -1,23 +1,23 @@
-import {
-  IconArrowRight,
-  IconChevronRight,
-  IconHome,
-} from "@tabler/icons-solidjs";
+import { IconChevronRight, IconHome } from "@tabler/icons-solidjs";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createMemo, onCleanup, onMount } from "solid-js";
 
 import { createOverlayScrollbars } from "overlayscrollbars-solid";
+import { browseUrl } from "@/lib/path";
 
 const BreadcrumbNavigation = () => {
   const navigate = useNavigate();
-  const params: { path: string } = useParams();
+  const params: { path?: string } = useParams();
   let scrollRef: HTMLDivElement | undefined;
   const links = createMemo(
     () =>
-      params.path?.split("/")?.map((link) => ({
-        path: link,
-        label: decodeURIComponent(link),
-      })) ?? [],
+      params.path
+        ?.split("/")
+        .filter((link) => link.length > 0)
+        .map((link) => ({
+          path: link,
+          label: link,
+        })) ?? [],
   );
 
   const [initialize, instance] = createOverlayScrollbars({
@@ -35,47 +35,45 @@ const BreadcrumbNavigation = () => {
   onCleanup(() => {
     instance()?.destroy();
   });
+
   return (
     <div ref={scrollRef}>
       <div class={"flex h-10 min-w-max shrink-0 items-center truncate"}>
         <button
           onClick={() => {
-            navigate(`/browse`);
+            navigate(browseUrl());
           }}
+          aria-label="根目录"
           class={
             "flex cursor-pointer items-center rounded-lg px-1 py-0.5 transition-all hover:bg-gray-300"
           }
         >
           <IconHome />
         </button>
-        {links().length && <Separator />}
-        {links().length &&
-          links()
-            .map((link, index) => (
-              <BreadcrumbNavigationItem
-                path={"txt"}
-                label={link.label}
-                onClick={() => {
-                  const path = links()
-                    .slice(0, index + 1)
-                    .map((link) => link.path)
-                    .join("/");
-                  navigate(`/browse/${path}`);
-                }}
-              />
-            ))
-            .reduce((prev, cur) => [prev, <Separator />, cur])}
+        {links().map((link, index) => (
+          <>
+            <Separator />
+            <BreadcrumbNavigationItem
+              label={link.label}
+              onClick={() => {
+                const path = links()
+                  .slice(0, index + 1)
+                  .map((item) => item.path)
+                  .join("/");
+                navigate(browseUrl(path));
+              }}
+            />
+          </>
+        ))}
       </div>
     </div>
   );
 };
 
 const BreadcrumbNavigationItem = ({
-  path,
   label,
   onClick,
 }: {
-  path: string;
   label: string;
   onClick: () => void;
 }) => {

@@ -3,8 +3,6 @@ import EntryIcon from "@/components/EntryIcon";
 import { filesize } from "filesize";
 import { IconDots } from "@tabler/icons-solidjs";
 import contextMenuStore, { OpenType } from "@/store/context_menu";
-// import FcFold from "flat-color-icons/svg/folder.svg";
-// import FcFold from "flat-color-icons/svg/file.svg";
 
 const FileTable = ({
   files,
@@ -16,11 +14,11 @@ const FileTable = ({
   const { openContextMenu } = contextMenuStore;
   return (
     <table class={"w-full border-separate border-spacing-x-4"}>
-      <thead class={"hidden md:block"}>
+      <thead class={"hidden md:table-header-group"}>
         <tr>
-          <th class={"text-left w-2/3 max-w-[200px]"}>文件名</th>
-          <th class={"text-left w-3/12"}>大小</th>
-          <th class={"md:hidden"}></th>
+          <th class={"w-2/3 max-w-[200px] text-left"}>文件名</th>
+          <th class={"w-3/12 text-left"}>大小</th>
+          <th class={"w-1/12"}></th>
         </tr>
       </thead>
       <tbody>
@@ -39,12 +37,13 @@ const FileTable = ({
             </td>
             <td class={"w-3/12"}>
               <span class={"truncate text-lg"}>
-                {file.size ? filesize(file.size) : ""}
+                {file.size !== undefined ? filesize(file.size) : ""}
               </span>
             </td>
             <td class={"w-1/12"}>
               <button
                 class={"cursor-pointer rounded-lg p-1 active:bg-blue-200"}
+                aria-label="文件操作"
                 onClick={() => {
                   openContextMenu({
                     entry: file,

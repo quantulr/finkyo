@@ -14,10 +14,13 @@ const createSavedPositionStore = () => {
     top?: number;
     layout: LayoutType;
   }) => {
-    setSavedPositionList((prev) =>
-      prev.set(`${path}-${layout}`, { path, top, layout }),
-    );
+    setSavedPositionList((prev) => {
+      const next = new Map(prev);
+      next.set(`${path}-${layout}`, { path, top, layout });
+      return next;
+    });
   };
+
   return {
     savedPositionList,
     pushSavedPosition,

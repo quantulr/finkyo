@@ -1,13 +1,15 @@
-declare enum EntryType {
-  File = "File",
-  Directory = "Directory",
-}
+type EntryType =
+  | "File"
+  | "Directory"
+  | "Symlink"
+  | "SymlinkDir"
+  | "SymlinkFile";
 
-declare interface FileEntryItem {
+interface FileEntryItem {
   name: string;
-  entryType: EntryType.File;
+  entryType: EntryType;
   width?: number;
   height?: number;
   size?: number;
-  lastModified?: number;
+  modified?: number;
 }

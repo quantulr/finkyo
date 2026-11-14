@@ -5,11 +5,12 @@
 ## 功能
 
 - **目录浏览**：网格 / 表格两种布局，面包屑导航
+- **排序与搜索**：按名称、大小、修改时间排序（目录优先），`Ctrl + F` 按文件名过滤
 - **图片预览**：PhotoSwipe 灯箱，支持手势与缩放
-- **音视频播放**：内置播放器，支持播放列表、进度拖拽与音量控制
+- **音视频播放**：内置播放器，支持播放列表、上一首 / 下一首、进度拖拽、音量与全屏
 - **在线打开**：文本文件与 PDF 直接在新标签页中打开
-- **文件下载**：通过右键菜单（桌面端）或底部弹窗（触屏端）下载
-- **搜索**：按文件名实时过滤，`Ctrl + F` 快速唤起
+- **文件操作**：下载、复制文件链接
+- **隐私默认**：默认隐藏以 `.` 开头的文件和目录
 - **单二进制部署**：前端静态资源编译进可执行文件，无需额外部署 Web 服务
 - **响应式界面**：适配桌面与移动设备
 
@@ -17,7 +18,7 @@
 
 ### 下载二进制
 
-从 [Releases](https://github.com/quantulr/finkyo/releases) 下载对应平台的预编译二进制（Windows amd64、Linux amd64/aarch64、macOS）。
+从 [Releases](https://github.com/quantulr/finkyo/releases) 下载对应平台的预编译二进制（Windows amd64、Linux amd64/aarch64、macOS aarch64）。
 
 ### 从源码构建
 
@@ -41,14 +42,17 @@ cargo build --release
 ### 运行
 
 ```bash
-# 以当前目录为根目录，默认端口 3000
+# 以当前目录为根目录，监听所有网卡的 3000 端口
 finkyo ./
 
 # 指定目录和端口
 finkyo ./photos -p 8080
+
+# 只监听本机，并开启响应压缩
+finkyo ./photos --host 127.0.0.1 -c
 ```
 
-启动后终端会打印所有网卡对应的访问地址，例如 `http://192.168.1.10:3000`。
+启动后终端会打印访问地址。`GET /healthz` 可用于健康检查。
 
 ## 命令行
 
@@ -60,9 +64,34 @@ Arguments:
 
 Options:
   -p, --port <PORT>  [default: 3000]
-  -c, --compress     enable directory compress
+      --host <HOST>  address to bind [default: 0.0.0.0]
+  -c, --compress     enable response compression
+      --hidden       show hidden entries (starting with '.')
   -h, --help         Print help
   -V, --version      Print version
+```
+
+## 安全说明
+
+finkyo 面向可信网络（局域网、个人设备）使用，**没有内置身份认证**。部署时请注意：
+
+- 默认绑定 `0.0.0.0`，会暴露给所有网卡；只在本机使用时请加 `--host 127.0.0.1`
+- 默认隐藏 `.` 开头的文件（如 `.git`、`.env`）；`--hidden` 会一并展示
+- 所有文件访问都会校验路径与符号链接，拒绝根目录之外的路径
+- `.html`、`.xhtml`、`.svg` 会被强制以附件下载，避免同源脚本执行
+- 如需公网访问，建议放在带认证的反向代理之后
+
+## Docker
+
+```bash
+docker build -t finkyo .
+docker run --rm -p 3000:3000 -v /path/to/files:/data finkyo
+```
+
+镜像默认以 `/data` 为根目录，可通过追加参数覆盖，例如：
+
+```bash
+docker run --rm -p 8080:8080 -v /path/to/files:/data finkyo /data -p 8080 -c
 ```
 
 ## 开发
@@ -81,6 +110,17 @@ pnpm dev
 
 打开 `http://localhost:3030`。Vite 会将 `/files` 与 `/file_link` 请求代理到后端 `http://localhost:3000`。
 
+常用检查：
+
+```bash
+cargo fmt --all -- --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+cd web && pnpm typecheck
+```
+
+日志级别可通过 `RUST_LOG` 控制，例如 `RUST_LOG=debug finkyo ./`。
+
 ## API
 
 | 方法 | 路径 | 说明 |
@@ -88,6 +128,7 @@ pnpm dev
 | `GET` | `/files/` | 列出根目录 |
 | `GET` | `/files/{path}` | 列出指定目录 |
 | `GET` | `/file_link/{path}` | 返回文件内容（支持 Range 请求） |
+| `GET` | `/healthz` | 健康检查 |
 | `GET` | `/*` | 内嵌前端静态资源，未匹配路径回退到 `index.html` |
 
 目录列表响应示例：
@@ -115,6 +156,15 @@ pnpm dev
 - `entryType`：`File`、`Directory`、`Symlink`、`SymlinkDir`、`SymlinkFile`
 - `modified`：Unix 毫秒时间戳
 - `width` / `height`：仅图片文件返回
+
+错误响应统一为：
+
+```json
+{
+  "message": "path not found",
+  "data": null
+}
+```
 
 ## 技术栈
 

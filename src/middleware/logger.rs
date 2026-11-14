@@ -23,14 +23,26 @@ pub async fn access_log(
     let res = next.run(req).await;
     let latency = start.elapsed();
 
-    tracing::info!(
-        %method,
-        path = %path,
-        status = res.status().as_u16(),
-        latency = ?latency,
-        client = %addr.ip(),
-        "request completed"
-    );
+    // 静态资源与健康检查只在 debug 级别记录，避免刷屏。
+    if path.starts_with("/assets/") || path.starts_with("/healthz") {
+        tracing::debug!(
+            %method,
+            path = %path,
+            status = res.status().as_u16(),
+            latency = ?latency,
+            client = %addr.ip(),
+            "request completed"
+        );
+    } else {
+        tracing::info!(
+            %method,
+            path = %path,
+            status = res.status().as_u16(),
+            latency = ?latency,
+            client = %addr.ip(),
+            "request completed"
+        );
+    }
 
     res
 }

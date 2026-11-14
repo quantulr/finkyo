@@ -1,9 +1,6 @@
 import axios from "axios";
-import { redirect } from "@solidjs/router";
 
-const request = axios.create({
-  // baseURL: '/files'
-});
+const request = axios.create();
 
 request.interceptors.response.use(
   (response) => {
